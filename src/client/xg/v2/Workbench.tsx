@@ -75,6 +75,70 @@ const eventLabel = (type: string): string => {
 }
 const priorityRank = (priority: Priority | null): number => priority === 'P0' ? 0 : priority === 'P1' ? 1 : priority === 'P2' ? 2 : 3
 const attentionRank: Record<AttentionKind, number> = { blocked: 0, accept: 1, requirement: 2, proposal: 3, inbox: 4, memory: 5, dispatch: 6 }
+
+type WorkLens = 'all' | 'you' | 'agent' | 'done'
+type WorkHolder = 'you' | 'agent' | 'block' | 'done' | 'none'
+type WorkAction = 'confirm' | 'split' | 'dispatch' | 'review' | 'accept' | 'handle' | 'view' | 'none'
+interface WorkSignal { holder: WorkHolder; tone: string; next: string; action: WorkAction }
+interface WorkSummary { total: number; you: number; agent: number; done: number }
+
+const taskTypeSeal = (type: TaskType): string => type === '设计' ? '设' : type === '排障' ? '排' : type === '评审' ? '评' : '开'
+const holderLabel = (holder: WorkHolder): string => holder === 'you' ? '你持有' : holder === 'agent' ? 'Agent 持有'
+  : holder === 'block' ? '等你处理' : holder === 'done' ? '已收口' : '无持棒人'
+const holderTone = (holder: WorkHolder): string => holder === 'you' ? 'you' : holder === 'agent' ? 'agent'
+  : holder === 'block' ? 'block' : holder === 'done' ? 'done' : 'idle'
+const taskSignal = (task: Task): WorkSignal => {
+  if (task.status === '就绪') return { holder: 'you', tone: 'you', next: '等你派发', action: 'dispatch' }
+  if (task.status === '进行中') return { holder: 'agent', tone: 'agent', next: 'Agent 执行中', action: 'view' }
+  if (task.status === '评审') return { holder: 'you', tone: 'you', next: '等你评审', action: 'review' }
+  if (task.status === '待验收') return { holder: 'you', tone: 'you', next: '等你验收', action: 'accept' }
+  if (task.status === '阻塞') return { holder: 'block', tone: 'block', next: '等你回答', action: 'handle' }
+  if (task.status === '完成') return { holder: 'done', tone: 'done', next: '已收口', action: 'view' }
+  return { holder: 'none', tone: 'idle', next: '已取消', action: 'none' }
+}
+const requirementSignal = (requirement: Requirement, related: Task[]): WorkSignal => {
+  if (requirement.status === '待确认') return { holder: 'you', tone: 'you', next: '等你确认', action: 'confirm' }
+  if (requirement.status === '已确认') return { holder: 'you', tone: 'you', next: '等你拆解', action: 'split' }
+  if (requirement.status === '已关闭') return { holder: 'none', tone: 'idle', next: '已关闭', action: 'view' }
+  const live = related.filter(task => task.status !== '取消')
+  if (live.some(task => task.status === '阻塞')) return { holder: 'block', tone: 'block', next: '有任务等你回答', action: 'view' }
+  if (live.some(task => task.status === '进行中')) return { holder: 'agent', tone: 'agent', next: 'Agent 正在执行', action: 'view' }
+  if (live.some(task => task.status === '就绪' || task.status === '评审' || task.status === '待验收')) {
+    return { holder: 'you', tone: 'you', next: '有任务等你', action: 'view' }
+  }
+  if (live.length && live.every(task => task.status === '完成')) return { holder: 'done', tone: 'done', next: '已收口', action: 'view' }
+  return { holder: 'none', tone: 'idle', next: '已拆分', action: 'view' }
+}
+const workSummary = (requirements: Requirement[], tasks: Task[]): WorkSummary => {
+  const byRequirement = new Map<string, Task[]>()
+  for (const task of tasks) {
+    const list = byRequirement.get(task.requirementId) ?? []
+    list.push(task)
+    byRequirement.set(task.requirementId, list)
+  }
+  const signals: WorkSignal[] = []
+  for (const requirement of requirements) {
+    if (requirement.status === '已拆分' || requirement.status === '已关闭') continue
+    signals.push(requirementSignal(requirement, byRequirement.get(requirement.id) ?? []))
+  }
+  for (const task of tasks) if (task.status !== '取消') signals.push(taskSignal(task))
+  return {
+    total: signals.length,
+    you: signals.filter(signal => signal.holder === 'you').length,
+    agent: signals.filter(signal => signal.holder === 'agent').length,
+    done: signals.filter(signal => signal.holder === 'done').length,
+  }
+}
+const relaySteps = (kind: 'requirement' | 'task', status: Requirement['status'] | TaskStatus): { label: string; actor: string }[] =>
+  kind === 'requirement'
+    ? [{ label: '待确认', actor: '你' }, { label: '已确认', actor: '你' }, { label: '已拆分', actor: '你 + Agent' }]
+    : [{ label: '待派发', actor: '你' }, { label: '进行中', actor: 'Agent' }, { label: '评审中', actor: '你' },
+      { label: '待验收', actor: '你' }, { label: '已完成', actor: '你' }]
+const relayCurrent = (kind: 'requirement' | 'task', status: Requirement['status'] | TaskStatus): number => {
+  if (kind === 'requirement') return status === '待确认' ? 0 : status === '已确认' ? 1 : status === '已关闭' ? 3 : 2
+  return status === '就绪' ? 0 : status === '进行中' || status === '阻塞' ? 1 : status === '评审' ? 2
+    : status === '待验收' ? 3 : status === '完成' ? 4 : -1
+}
 const proposalTaskRows = (proposal: Proposal): { title?: string; type?: string; priority?: string; description?: string; acceptance?: string }[] => {
   const payload = proposal.payload as { tasks?: unknown } | null | undefined
   return Array.isArray(payload?.tasks) ? payload.tasks as { title?: string; type?: string; priority?: string }[] : []
@@ -164,8 +228,10 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const { state: panel } = usePanelData()
   const { data, error, reload } = usePoll(() => xgGet('/workbench'), [], 5000)
   const stored = useSyncExternalStore(subscribeViewState, () => readViewState(view), () => readViewState(view))
-  const [workType, setWorkType] = useState<'all' | 'requirement' | 'task'>('all')
+  const [workLens, setWorkLens] = useState<WorkLens>('all')
   const [workProject, setWorkProject] = useState('all')
+  const [workSearch, setWorkSearch] = useState('')
+  const [openDone, setOpenDone] = useState<Set<string>>(new Set())
   const [inboxProject, setInboxProject] = useState('all')
   const [memoryProject, setMemoryProject] = useState('all')
   const [triage, setTriage] = useState<TriageDraft | null>(null)
@@ -391,7 +457,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           <Btn variant="primary" size="sm" busy={busy === `proposal:${proposal.id}`} onClick={() => applyProposal(proposal)}>应用</Btn>
           <Btn variant="outline" size="sm" busy={busy === `proposal:${proposal.id}`} onClick={() => rejectProposal(proposal)}>拒绝</Btn>
         </> : null}
-        {target ? <Btn variant="ghost" size="sm" onClick={() => openDoc('requirement', target.id)}>查看需求</Btn> : null}
+        {target && target.id !== selectedRequirement?.id ? <Btn variant="ghost" size="sm" onClick={() => openDoc('requirement', target.id)}>查看需求</Btn> : null}
       </div>
     </div>
   }
@@ -487,112 +553,245 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     </section>
   </>
 
-  const workRow = (kind: 'requirement' | 'task', item: Requirement | Task) => {
-    const tone = kind === 'requirement' ? requirementTone((item as Requirement).status) : taskTone((item as Task).status)
-    const state = kind === 'requirement' ? requirementStatusLabel((item as Requirement).status) : taskStatusLabel((item as Task).status)
-    return <button className="wb-workrow" key={`${kind}:${item.id}`} onClick={() => openDoc(kind, item.id)}>
-      <span className="wb-worktype">{kind === 'requirement' ? '需求' : '任务'}</span>
-      <span className="wb-workmain"><span className="wb-worktitle">{item.title}</span>
-        <span className="wb-workmeta">{item.priority ?? '—'} · 更新 {timeAgo(item.updatedAt)}</span></span>
-      <span className="wb-workstate"><Dot tone={tone} />{state}</span><span className="wb-arrow">→</span>
-    </button>
+  const toggleDone = (id: string) => setOpenDone(current => {
+    const next = new Set(current)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const runRequirementAction = (requirement: Requirement, action: WorkAction) => {
+    if (action === 'confirm') confirmRequirement(requirement)
+    else if (action === 'split') openSplit(requirement)
+    else openDoc('requirement', requirement.id)
+  }
+  const runTaskAction = (task: Task, action: WorkAction) => {
+    if (action === 'dispatch') dispatchTask(task)
+    else if (action === 'accept') acceptTask(task)
+    else openDoc('task', task.id)
+  }
+  const taskRow = (task: Task, showHolder = true) => {
+    const signal = taskSignal(task)
+    const actionLabel = signal.action === 'dispatch' ? '派发' : signal.action === 'review' ? '评审'
+      : signal.action === 'accept' ? '验收' : signal.action === 'handle' ? '处理' : '查看'
+    return <div className={`wb-taskrow ${signal.tone}`} key={task.id}>
+      <span className={`wb-taskseal ${signal.tone}`}>{taskTypeSeal(task.type)}</span>
+      <button className="wb-taskmain" onClick={() => openDoc('task', task.id)}>
+        <span className="wb-tasktitle">{task.title}</span>
+        <span className="wb-taskmeta">{task.id} · {task.priority} · {taskStatusLabel(task.status)} · 更新 {timeAgo(task.updatedAt)}</span>
+      </button>
+      <span className={`wb-statechip ${signal.tone}`}>{taskStatusLabel(task.status)}</span>
+      {showHolder ? <span className={`wb-holder ${signal.tone}`}><i />{signal.next}</span> : null}
+      <button className={`wb-rowaction ${signal.tone}`} disabled={busy === `${signal.action}:${task.id}`}
+        onClick={() => runTaskAction(task, signal.action)}>{actionLabel} →</button>
+    </div>
+  }
+  const workList = ({ compact = false }: { compact?: boolean }) => {
+    const search = workSearch.trim().toLowerCase()
+    const matches = (title: string, id: string) => !search || title.toLowerCase().includes(search) || id.toLowerCase().includes(search)
+    const projectRequirements = requirements.filter(item => workProject === 'all' || item.projectId === workProject)
+    const projectTasks = tasks.filter(item => item.status !== '取消' && (workProject === 'all' || item.projectId === workProject))
+    const scopedRequirements = projectRequirements.filter(item => matches(item.title, item.id)
+      || projectTasks.some(task => task.requirementId === item.id && matches(task.title, task.id)))
+    const scopedTasks = projectTasks.filter(item => matches(item.title, item.id)
+      || scopedRequirements.some(requirement => requirement.id === item.requirementId && matches(requirement.title, requirement.id)))
+    const summary = workSummary(scopedRequirements, scopedTasks)
+    const lenses: { id: WorkLens; label: string; count: number; tone?: string }[] = [
+      { id: 'all', label: '全部', count: summary.total },
+      { id: 'you', label: '需要你', count: summary.you, tone: 'you' },
+      { id: 'agent', label: 'Agent 在办', count: summary.agent, tone: 'agent' },
+      { id: 'done', label: '已收口', count: summary.done, tone: 'done' },
+    ]
+    const visibleGroups = projects.map(project => {
+      const groupRequirements = scopedRequirements.filter(item => item.projectId === project.id)
+      const groupTasks = scopedTasks.filter(item => item.projectId === project.id)
+      const blocks = groupRequirements.flatMap(requirement => {
+        const related = tasks.filter(task => task.requirementId === requirement.id && task.status !== '取消')
+        const signal = requirementSignal(requirement, related)
+        const reqMatches = workLens === 'all' || signal.holder === workLens
+        const matchingTasks = related.filter(task => workLens === 'all' || taskSignal(task).holder === workLens)
+        const visibleTasks = workLens === 'all' ? related : reqMatches || matchingTasks.length ? matchingTasks : []
+        const pending = proposals.filter(proposal => proposal.status === '待确认' && proposal.targetType === 'requirement'
+          && proposal.targetId === requirement.id)
+        const showProposal = pending.length > 0 && workLens !== 'done' && workLens !== 'agent'
+        const show = reqMatches || matchingTasks.length > 0
+        return show ? [{ requirement, related, signal, visibleTasks, pending, showProposal }] : []
+      })
+      return { project, blocks, requirements: groupRequirements, tasks: groupTasks }
+    }).filter(group => group.blocks.length)
+    return <div className={`wb-worklist ${compact ? 'compact' : ''}`}>
+      <div className="wb-workhead">
+        <div className="wb-workeyebrow">WORK / 工作台账</div>
+        <div className="wb-workheadrow">
+          <div><h1>工作</h1><p>{requirements.length} 条需求 · {tasks.filter(task => task.status !== '取消').length} 个任务。先处理你手里的，其余 Agent 会推进。</p></div>
+          <div className="wb-pulse">
+            <div className="wb-pulseitem you"><b>{summary.you}</b><span>需要你</span></div>
+            <div className="wb-pulseitem agent"><b>{summary.agent}</b><span>Agent 在办</span></div>
+            <div className="wb-pulseitem done"><b>{summary.done}</b><span>已收口</span></div>
+          </div>
+        </div>
+      </div>
+      <div className="wb-worktools">
+        <div className="wb-lenses">
+          {lenses.map(lens => <button key={lens.id} className={`wb-lens ${workLens === lens.id ? 'active' : ''}`} onClick={() => setWorkLens(lens.id)}>
+            {lens.tone ? <i className={`wb-lensdot ${lens.tone}`} /> : null}{lens.label}<span className="num">{lens.count}</span>
+          </button>)}
+        </div>
+        <div className="wb-workfilters">
+          <select className="wb-projectselect" value={workProject} onChange={event => setWorkProject(event.target.value)} aria-label="项目筛选">
+            <option value="all">全部项目</option>
+            {projects.map(project => <option key={project.id} value={project.id}>{displayProject(project)}</option>)}
+          </select>
+          <input className="wb-worksearch" value={workSearch} onChange={event => setWorkSearch(event.target.value)}
+            placeholder="搜标题、编号" aria-label="搜索工作" />
+        </div>
+      </div>
+      {visibleGroups.length ? visibleGroups.map(group => {
+        const groupSummary = workSummary(group.requirements, group.tasks)
+        return <section className="wb-projectgroup" key={group.project.id}>
+          <div className="wb-projecthead">
+            <span className="wb-projectcode">{displayProject(group.project)}</span>
+            <b>{group.project.name}</b>
+            <span className="wb-projectmeta">{group.requirements.length} 条需求 · {group.tasks.length} 件工作 · {groupSummary.you} 件需要你</span>
+            <span className="wb-projectpulse" aria-hidden="true">
+              {groupSummary.done ? <i className="done" style={{ flex: groupSummary.done }} /> : null}
+              {groupSummary.agent ? <i className="agent" style={{ flex: groupSummary.agent }} /> : null}
+              {groupSummary.you ? <i className="you" style={{ flex: groupSummary.you }} /> : null}
+            </span>
+          </div>
+          {group.blocks.map(({ requirement, related, signal, visibleTasks, pending, showProposal }) => {
+            const doneTasks = visibleTasks.filter(task => task.status === '完成')
+            const activeTasks = visibleTasks.filter(task => task.status !== '完成')
+            const doneOpen = openDone.has(requirement.id)
+            const actionLabel = signal.action === 'confirm' ? '确认' : signal.action === 'split' ? '拆解' : '查看'
+            return <div className={`wb-reqblock ${signal.tone}`} key={requirement.id}>
+              <div className="wb-reqrow">
+                <span className="wb-reqseal">需</span>
+                <button className="wb-reqmain" onClick={() => openDoc('requirement', requirement.id)}>
+                  <span className="wb-reqtitle">{requirement.title}</span>
+                  <span className="wb-reqmeta">{requirement.id} · {requirement.priority ?? '未定'} · 来源 {requirement.sourceNote || '人工录入'}
+                    · {related.length} 个任务 · 更新 {timeAgo(requirement.updatedAt)}</span>
+                </button>
+                <span className={`wb-statechip ${signal.tone}`}>{requirementStatusLabel(requirement.status)}</span>
+                {!compact ? <span className={`wb-holder ${signal.tone}`}><i />{signal.next}</span> : null}
+                <button className={`wb-rowaction ${signal.tone}`} disabled={busy === `${signal.action}:${requirement.id}`}
+                  onClick={() => runRequirementAction(requirement, signal.action)}>{actionLabel} →</button>
+              </div>
+              {showProposal ? pending.map(proposal => <button className="wb-proposalstrip" key={proposal.id}
+                onClick={() => openDoc('requirement', requirement.id)}>
+                <span className="wb-proposalmark">A</span><b>Agent 提案</b><span>{proposal.title}</span>
+                <span className="wb-proposalcount">+{proposalTaskRows(proposal).length} 个任务</span><span className="wb-proposallink">看 diff →</span>
+              </button>) : null}
+              {activeTasks.map(task => taskRow(task, !compact))}
+              {doneTasks.length ? (doneOpen || workLens === 'done'
+                ? <>{doneTasks.map(task => taskRow(task, !compact))}<button className="wb-donefold open" onClick={() => toggleDone(requirement.id)}>收起已完成 {doneTasks.length}</button></>
+                : <button className="wb-donefold" onClick={() => toggleDone(requirement.id)}>✓ 已完成 {doneTasks.length} <span>展开</span></button>) : null}
+              {!visibleTasks.length && requirement.status === '已拆分' ? <p className="wb-reqhint">当前镜头下没有任务。</p> : null}
+            </div>
+          })}
+        </section>
+      }) : <div className="wb-workempty"><Dot tone="ok" /><div><b>当前镜头下没有工作。</b><p>切换「全部」或清空搜索；Agent 正在跑的工作会出现在「Agent 在办」。</p></div></div>}
+      <div className="wb-listend">{summary.total} 项在手 · 数据来自本地 SQLite · {timeAgo(new Date().toISOString())}</div>
+    </div>
   }
 
-  const workList = () => {
-    const visibleRequirements = requirements.filter(item => (workType === 'all' || workType === 'requirement')
-      && (workProject === 'all' || item.projectId === workProject))
-    const visibleTasks = tasks.filter(item => (workType === 'all' || workType === 'task')
-      && (workProject === 'all' || item.projectId === workProject) && item.status !== '取消')
-    const groups = projects.map(project => ({
-      project,
-      requirements: visibleRequirements.filter(item => item.projectId === project.id),
-      tasks: visibleTasks.filter(item => item.projectId === project.id),
-    })).filter(group => group.requirements.length || group.tasks.length)
-    return <>
-      <div className="wb-pagehead">
-        <div><div className="wb-kicker">工作 · 全部项目</div><h1>工作</h1><p>两个项目的需求和任务都在这里。默认打开文档，列表只是镜头。</p></div>
-        <div className="wb-headstat"><b>{visibleRequirements.length + visibleTasks.length}</b>项</div>
-      </div>
-      <div className="wb-filterbar">
-        <div className="wb-filters">
-          <button className={`wb-filter ${workType === 'all' ? 'active' : ''}`} onClick={() => setWorkType('all')}>全部</button>
-          <button className={`wb-filter ${workType === 'requirement' ? 'active' : ''}`} onClick={() => setWorkType('requirement')}>需求</button>
-          <button className={`wb-filter ${workType === 'task' ? 'active' : ''}`} onClick={() => setWorkType('task')}>任务</button>
-        </div>
-        <div className="wb-filters">
-          <button className={`wb-filter ${workProject === 'all' ? 'active' : ''}`} onClick={() => setWorkProject('all')}>全部项目</button>
-          {projects.map(project => <button key={project.id} className={`wb-filter ${workProject === project.id ? 'active' : ''}`}
-            onClick={() => setWorkProject(project.id)}>{displayProject(project)}</button>)}
-        </div>
-      </div>
-      {groups.length ? groups.map(group => <div className="wb-workgroup" key={group.project.id}>
-        <div className="wb-workgrouphead"><b>{displayProject(group.project)} · {group.project.name}</b><span className="spacer" />
-          <small>{group.requirements.length + group.tasks.length} 项</small></div>
-        {group.requirements.map(item => workRow('requirement', item))}
-        {group.tasks.map(item => workRow('task', item))}
-      </div>) : <p className="wb-empty">当前筛选下没有工作。</p>}
-    </>
+  const relay = (kind: 'requirement' | 'task', status: Requirement['status'] | TaskStatus) => {
+    const steps = relaySteps(kind, status)
+    const current = relayCurrent(kind, status)
+    return <ol className={`wb-relay ${kind}`} aria-label={`${kind === 'requirement' ? '需求' : '任务'}接力`}>
+      {steps.map((step, index) => <li className={index < current ? 'done' : index === current ? 'current' : 'future'} key={step.label}
+        aria-current={index === current ? 'step' : undefined}>
+        <span className="wb-relayactor">{step.actor}</span><span className="wb-relaynode" />
+        <span className="wb-relaylabel">{step.label}</span>
+      </li>)}
+    </ol>
   }
 
   const requirementDoc = (requirement: Requirement) => {
     const project = projectsById.get(requirement.projectId)
     const related = tasks.filter(task => task.requirementId === requirement.id)
     const liveTasks = related.filter(task => task.status !== '取消')
+    const doneTasks = related.filter(task => task.status === '完成')
+    const signal = requirementSignal(requirement, related)
+    const source = requirement.sourceId ? inbox.find(item => item.id === requirement.sourceId) : undefined
     const relatedProposals = proposals.filter(proposal => proposal.targetType === 'requirement' && proposal.targetId === requirement.id).slice(0, 5)
     const pendingProposals = relatedProposals.filter(proposal => proposal.status === '待确认').length
     const events = audit.filter(entry => entry.entityId === requirement.id).slice(0, 8)
-    const needs = needsHuman(requirement.status)
-    return <div className="wb-doc">
-      <button className="wb-back" onClick={backToList}>← 工作</button>
-      <div className="wb-eyebrow">需求 <span>/</span> {project ? displayProject(project) : '项目'} · {project?.name ?? ''}</div>
-      <div className="wb-doc-head">
-        <h1>{requirement.title}</h1>
-        <div className="wb-status">
-          <Dot tone={requirementTone(requirement.status)} /><b>{requirementStatusLabel(requirement.status)}</b>
-          <span className="wb-statusnote">{requirementStatusNote(requirement.status)}</span>
-          {needs ? <span className="wb-needs">{needs}</span> : null}
-          <span className="wb-progress"><i style={{ width: related.length ? `${related.filter(task => task.status === '完成').length / related.length * 100}%` : '0%' }} /></span>
-          <span className="wb-statusactions">
-            {requirement.status === '待确认' ? <Btn variant="signal" size="sm" busy={busy === `confirm:${requirement.id}`}
-              onClick={() => confirmRequirement(requirement)}>确认需求</Btn> : null}
-            <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>拆解</Btn>
-            <Btn variant="ghost" size="sm" onClick={() => askAbout(requirement.id)}>问 Agent</Btn>
-          </span>
+    const holder = `${holderLabel(signal.holder)} · ${signal.next}`
+    const actions = <>
+      {requirement.status === '待确认' ? <Btn variant="signal" size="sm" busy={busy === `confirm:${requirement.id}`}
+        onClick={() => confirmRequirement(requirement)}>确认需求</Btn> : null}
+      {requirement.status !== '已关闭' ? <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>自己拆解</Btn> : null}
+      <Btn variant="ghost" size="sm" onClick={() => askAbout(requirement.id)}>问 Agent</Btn>
+    </>
+    return <div className="wb-doc wb-workdoc">
+      <button className="wb-back" onClick={backToList}>← 工作列表</button>
+      <div className="wb-doccrumb">需求 <span>/</span> {project ? displayProject(project) : '项目'} <span>/</span> {requirement.id}</div>
+      <header className="wb-workdochead">
+        <span className="wb-docseal req">需</span>
+        <div className="wb-docheadmain">
+          <h1>{requirement.title}</h1>
+          <div className="wb-holderline"><span className={`wb-statechip ${signal.tone}`}>{requirementStatusLabel(requirement.status)}</span>
+            <span className={`wb-holder ${signal.tone}`}><i />{holder}</span></div>
+          <div className="wb-docmeta">P {requirement.priority ?? '未定'} · 来源 {requirement.sourceNote || '人工录入'} · 更新 {timeAgo(requirement.updatedAt)} · {related.length} 个任务</div>
         </div>
+        <div className="wb-docactions">{actions}</div>
+      </header>
+      {relay('requirement', requirement.status)}
+      <div className="wb-docgrid">
+        <main className="wb-docmain">
+          {source ? <blockquote className="wb-sourcequote">
+            <div className="wb-sourcehead"><span>{source.channel}</span><b>{source.contact || '未知联系人'}</b><span>{timeAgo(source.receivedAt)}</span></div>
+            <p>{source.rawContext || '没有原文。'}</p>
+            <button className="wb-link" onClick={() => openInboxItem(source)}>查看收件 →</button>
+          </blockquote> : null}
+          {requirement.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{requirement.description}</p></section> : null}
+          {relatedProposals.length ? <section className="wb-docsection"><h2>Agent 提案 <span className="hint">{pendingProposals ? `${pendingProposals} 条待确认` : '已处理'}</span></h2>
+            <div className="wb-proposals">{relatedProposals.map(proposalCard)}</div>
+          </section> : null}
+          <section className="wb-docsection"><h2>任务构成 <span className="hint">{related.length} 个 · {doneTasks.length} 完成</span></h2>
+            {related.length ? <div className="wb-doctasks">{related.map(task => taskRow(task))}</div>
+              : <p className="wb-hintline">还没有任务。自己拆解，或让 Agent 先拟一份拆解提案。</p>}
+          </section>
+          {events.length ? <section className="wb-docsection"><h2>时间线</h2>
+            <ol className="wb-timeline">{events.map(entry => <li className="wb-tlitem" key={entry.id}>
+              <span className="wb-tltime">{clock(entry.createdAt)}</span><span className="wb-tldot signal" />
+              <span className="wb-tlbody"><b>{entry.action}</b><p>{entry.actor ?? '系统'}</p></span>
+            </li>)}</ol>
+          </section> : null}
+          <details className="wb-details">
+            <summary>诊断</summary>
+            <div className="wb-details-body">
+              <div className="wb-kv"><span>需求 ID</span><b>{requirement.id}</b></div>
+              <div className="wb-kv"><span>项目 ID</span><b>{requirement.projectId}</b></div>
+              <div className="wb-kv"><span>来源</span><b>{requirement.sourceNote || '人工录入'}</b></div>
+              <div className="wb-kv"><span>创建</span><b>{timeAgo(requirement.createdAt)}</b></div>
+            </div>
+          </details>
+        </main>
+        <aside className="wb-rail">
+          <section className="wb-railcard">
+            <div className="wb-railhead">需求信息</div>
+            <div className="wb-settingrow"><span>状态</span><b>{requirementStatusLabel(requirement.status)}</b></div>
+            <div className="wb-settingrow"><span>持棒人</span><b>{holderLabel(signal.holder)}</b></div>
+            <div className="wb-settingrow"><span>优先级</span><b>{requirement.priority ?? '未定'}</b></div>
+            <div className="wb-settingrow"><span>来源</span><b>{requirement.sourceNote || '人工录入'}</b></div>
+            <div className="wb-settingrow"><span>任务</span><b>{related.length} 个 · {doneTasks.length} 完成</b></div>
+            <div className="wb-settingrow"><span>待处理提案</span><b>{pendingProposals}</b></div>
+          </section>
+          <section className="wb-railcard">
+            <div className="wb-railhead">相关记录</div>
+            <div className="wb-settingrow"><span>收件</span><b>{source ? `${source.channel} · ${source.contact ?? '未知'}` : '无'}</b></div>
+            <div className="wb-settingrow"><span>审计</span><b>{audit.filter(entry => entry.entityId === requirement.id).length} 条</b></div>
+          </section>
+          <div className="wb-docfooter">
+            <Btn variant="ghost" size="sm" busy={busy === `delete:${requirement.id}`} disabled={liveTasks.length > 0}
+              onClick={() => removeRequirement(requirement)}
+              title={liveTasks.length ? '需求下还有未取消的任务' : '删除需求'}>删除需求</Btn>
+            <span className="wb-dangerhint">{liveTasks.length ? `还有 ${liveTasks.length} 个未取消的任务，先取消或删除任务。`
+              : '删除后不再出现在列表，历史保留。'}</span>
+          </div>
+        </aside>
       </div>
-      <div className="wb-metarow"><span>优先级 <b>{requirement.priority ?? '未定'}</b></span><span>来源 <b>{requirement.sourceNote || '人工录入'}</b></span>
-        <span>更新 <b>{timeAgo(requirement.updatedAt)}</b></span><span>任务 <b>{related.length}</b></span></div>
-      {relatedProposals.length ? <section className="wb-docsection"><h2>Agent 提案 <span className="hint">{pendingProposals ? `${pendingProposals} 条待确认` : '已处理'}</span></h2>
-        <div className="wb-proposals">{relatedProposals.map(proposalCard)}</div>
-      </section> : null}
-      {requirement.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{requirement.description}</p></section> : null}
-      {related.length ? <section className="wb-docsection"><h2>任务 <span className="hint">{related.length}</span></h2>
-        <div className="wb-tasklist">{related.map(task => <button className="wb-taskrow" key={task.id} onClick={() => openDoc('task', task.id)}>
-          <Dot tone={taskTone(task.status)} /><span className="wb-tasktitle">{task.title}</span>
-          <span className="wb-taskstate">{taskStatusLabel(task.status)}</span></button>)}</div>
-      </section> : <p className="wb-hintline">还没有任务。点上方「拆解」创建第一个。</p>}
-      {events.length ? <section className="wb-docsection"><h2>时间线</h2>
-        <ol className="wb-timeline">{events.map(entry => <li className="wb-tlitem" key={entry.id}>
-          <span className="wb-tltime">{clock(entry.createdAt)}</span><span className="wb-tldot signal" />
-          <span className="wb-tlbody"><b>{entry.action}</b><p>{entry.actor ?? '系统'}</p></span>
-        </li>)}</ol>
-      </section> : null}
-      <details className="wb-details">
-        <summary>诊断</summary>
-        <div className="wb-details-body">
-          <div className="wb-kv"><span>需求 ID</span><b>{requirement.id}</b></div>
-          <div className="wb-kv"><span>项目 ID</span><b>{requirement.projectId}</b></div>
-          <div className="wb-kv"><span>来源</span><b>{requirement.sourceNote || '人工录入'}</b></div>
-          <div className="wb-kv"><span>创建</span><b>{timeAgo(requirement.createdAt)}</b></div>
-        </div>
-      </details>
-      <div className="wb-docfooter">
-        <Btn variant="ghost" size="sm" busy={busy === `delete:${requirement.id}`} disabled={liveTasks.length > 0}
-          onClick={() => removeRequirement(requirement)}
-          title={liveTasks.length ? '需求下还有未取消的任务' : '删除需求'}>删除需求</Btn>
-        <span className="wb-dangerhint">{liveTasks.length ? `还有 ${liveTasks.length} 个未取消的任务，先取消或删除任务。`
-          : '删除后不再出现在列表，历史保留。'}</span>
-      </div>
+      <div className="wb-docdock">{actions}</div>
     </div>
   }
 
@@ -628,7 +827,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const events = (fetched?.data?.events ?? []).filter(event => event.eventType !== '产物' && event.eventType !== '绑定工单')
     const latestAttempt = fetched?.data?.attempts.slice()
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
-    const needs = needsHuman(task.status)
+    const signal = taskSignal(task)
     const hasReport = !!(latestAttempt?.attention || latestAttempt?.lastReportAt)
     const agentTitle = hasReport ? 'Agent 最近汇报' : 'Agent 状态'
     const agentNote = latestAttempt?.attention
@@ -640,86 +839,124 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           : task.status === '就绪' ? '还没有开始，等你派发。'
           : '任务已经结束。'
         : '正在读取 Agent 汇报…')
-    return <div className="wb-doc">
-      <button className="wb-back" onClick={backToList}>← 工作</button>
-      <div className="wb-eyebrow">任务 <span>/</span> {project ? displayProject(project) : '项目'} · {project?.name ?? ''}</div>
-      <div className="wb-doc-head">
-        <h1>{task.title}</h1>
-        <div className="wb-status">
-          <Dot tone={taskTone(task.status)} /><b>{taskStatusLabel(task.status)}</b>
-          <span className="wb-statusnote">{taskStatusNote(task.status)}</span>
-          {needs ? <span className="wb-needs">{needs}</span> : null}
-          <span className="wb-progress"><i style={{ width: task.status === '完成' ? '100%' : task.status === '待验收' ? '90%'
-            : task.status === '进行中' || task.status === '评审' ? '60%' : '12%' }} /></span>
-          <span className="wb-statusactions">{taskActions(task)}</span>
+    return <div className="wb-doc wb-workdoc">
+      <button className="wb-back" onClick={backToList}>← 工作列表</button>
+      <div className="wb-doccrumb">任务 <span>/</span> {project ? displayProject(project) : '项目'} <span>/</span> {task.id}</div>
+      <header className="wb-workdochead">
+        <span className="wb-docseal task">任</span>
+        <div className="wb-docheadmain">
+          <h1>{task.title}</h1>
+          <div className="wb-holderline"><span className={`wb-statechip ${signal.tone}`}>{taskStatusLabel(task.status)}</span>
+            <span className={`wb-holder ${signal.tone}`}><i />{holderLabel(signal.holder)} · {signal.next}</span></div>
+          <div className="wb-docmeta">{task.priority} · {task.type} · {requirement ? requirement.title : task.requirementId} · 更新 {timeAgo(task.updatedAt)}</div>
         </div>
-      </div>
-      <div className="wb-metarow"><span>需求 <b>{requirement ? requirement.title : '—'}</b></span>
-        <span>类型 <b>{task.type}</b></span><span>优先级 <b>{task.priority}</b></span><span>更新 <b>{timeAgo(task.updatedAt)}</b></span></div>
-      <div className="wb-agentline"><Dot tone={taskTone(task.status)} /><div><b>{agentTitle}</b><p>{agentNote}</p></div></div>
-      {task.status === '评审' ? <section className="wb-reviewbox" ref={reviewBox}>
-        <div className="wb-reviewhead"><b>评审结论</b><span>通过后进入待验收；退回后 Agent 继续处理。</span></div>
-        <textarea className="wb-textarea" rows={3} value={reviewComment} placeholder="意见（可选，退回时写清要改什么）"
-          onChange={event => setReviewComment(event.target.value)} />
-        <div className="wb-formactions">
-          <Btn variant="primary" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '通过')}>通过</Btn>
-          <Btn variant="outline" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '退回')}>退回</Btn>
+        <div className="wb-docactions">
+          <Btn variant="outline" size="sm" onClick={() => askAbout(task.id)}>问 Agent</Btn>
         </div>
-      </section> : null}
-      {fetched?.error ? <p className="wb-error">{fetched.error.message}</p> : null}
-      {task.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{task.description}</p></section> : null}
-      {task.acceptance ? <section className="wb-docsection"><h2>验收标准</h2>
-        <div className="wb-checklist">{task.acceptance.split('\n').filter(Boolean).map((line, index) => <div className="wb-check" key={index}>
-          <span className={`wb-tick ${task.status === '完成' ? 'done' : ''}`}>{task.status === '完成' ? '✓' : ''}</span><span>{line}</span></div>)}</div>
-      </section> : null}
-      {evidence.length ? <section className="wb-docsection"><h2>证据 <span className="hint">{evidence.length}</span></h2>
-        <div className="wb-evidence">{evidence.map(artifact => {
-          const open = openArtifact === artifact.id
-          return <div className={`wb-ev ${open ? 'open' : ''}`} key={artifact.id}>
-            <button type="button" className="wb-ev-toggle" onClick={() => setOpenArtifact(open ? null : artifact.id)}>
-              <span className="wb-ev-title"><b>{artifact.title || `${artifact.type}证据`}</b>
-                <small>{artifact.type} · {timeAgo(artifact.createdAt)}</small></span>
-              <span className="wb-ev-action">{open ? '收起' : '查看'}</span>
-            </button>
-            {open ? <div className="wb-ev-body">
-              {artifact.content ? <p>{artifact.content}</p> : <p className="wb-muted">没有正文。</p>}
-              {artifact.uri ? <p className="wb-ev-uri">{artifact.uri}</p> : null}
-            </div> : null}
-          </div>
-        })}</div>
-      </section> : null}
-      {events.length ? <section className="wb-docsection"><h2>时间线</h2>
-        <ol className="wb-timeline">{events.map(event => <li className="wb-tlitem" key={event.id}>
-          <span className="wb-tltime">{clock(event.createdAt)}</span><span className="wb-tldot run" />
-          <span className="wb-tlbody"><b>{eventLabel(event.eventType)}</b><p>{event.actor ?? '系统'}</p></span>
-        </li>)}</ol>
-      </section> : null}
-      <details className="wb-details">
-        <summary>诊断</summary>
-        <div className="wb-details-body">
-          <div className="wb-kv"><span>任务 ID</span><b>{task.id}</b></div>
-          <div className="wb-kv"><span>需求 ID</span><b>{task.requirementId}</b></div>
-          <div className="wb-kv"><span>项目 ID</span><b>{task.projectId}</b></div>
-          <div className="wb-kv"><span>当前尝试</span><b>{task.currentAttemptId ?? '—'}</b></div>
-          <div className="wb-kv"><span>创建</span><b>{timeAgo(task.createdAt)}</b></div>
-          {fetched?.data?.attempts.length ? <div className="wb-diag-attempts">
-            <h3>执行尝试</h3>
-            {fetched.data.attempts.map(attempt => <div className="wb-diag-row" key={attempt.id}>
-              <b>{attempt.id}</b><span>{attempt.status} · {attempt.stage ?? '—'}</span>
-              <small>{timeAgo(attempt.createdAt)}{attempt.endedAt ? ` · 结束 ${timeAgo(attempt.endedAt)}` : ''}</small>
+      </header>
+      {relay('task', task.status)}
+      <div className="wb-docgrid">
+        <main className="wb-docmain">
+          <section className={`wb-agentcard ${signal.tone}`}>
+            <Dot tone={signal.tone === 'you' ? 'signal' : signal.tone} />
+            <div><b>{agentTitle}</b><p>{agentNote}</p>
+              <div className="wb-agentmeta">阶段 {latestAttempt?.stage ?? '—'} · 尝试 {latestAttempt?.status ?? '—'} · 更新 {timeAgo(task.updatedAt)}</div>
+            </div>
+          </section>
+          {fetched?.error ? <p className="wb-error">{fetched.error.message}</p> : null}
+          {task.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{task.description}</p></section> : null}
+          {task.acceptance ? <section className="wb-docsection"><h2>验收标准 <span className="hint">{evidence.length} 项证据</span></h2>
+            <div className="wb-checklist">{task.acceptance.split('\n').filter(Boolean).map((line, index) => <div className="wb-check" key={index}>
+              <span className={`wb-tick ${task.status === '完成' ? 'done' : ''}`}>{task.status === '完成' ? '✓' : ''}</span><span>{line}</span></div>)}</div>
+          </section> : null}
+          {evidence.length ? <section className="wb-docsection"><h2>证据 <span className="hint">{evidence.length}</span></h2>
+            <div className="wb-evidence">{evidence.map(artifact => {
+              const open = openArtifact === artifact.id
+              return <div className={`wb-ev ${open ? 'open' : ''}`} key={artifact.id}>
+                <button type="button" className="wb-ev-toggle" onClick={() => setOpenArtifact(open ? null : artifact.id)}>
+                  <span className="wb-ev-title"><b>{artifact.title || `${artifact.type}证据`}</b>
+                    <small>{artifact.type} · {timeAgo(artifact.createdAt)}</small></span>
+                  <span className="wb-ev-action">{open ? '收起' : '查看'}</span>
+                </button>
+                {open ? <div className="wb-ev-body">
+                  {artifact.content ? <p>{artifact.content}</p> : <p className="wb-muted">没有正文。</p>}
+                  {artifact.uri ? <p className="wb-ev-uri">{artifact.uri}</p> : null}
+                </div> : null}
+              </div>
+            })}</div>
+          </section> : null}
+          {fetched?.data?.reviews.length ? <section className="wb-docsection"><h2>评审记录</h2>
+            {fetched.data.reviews.map(review => <div className="wb-reviewrecord" key={review.id}>
+              <b>{review.decision === '通过' ? '通过' : '退回'}</b><span>{review.reviewer ?? '评审智能体'} · {timeAgo(review.createdAt)}</span>
+              {review.comments ? <p>{review.comments}</p> : null}
             </div>)}
-          </div> : null}
-        </div>
-      </details>
-      <div className="wb-docfooter">
-        <Btn variant="ghost" size="sm" busy={busy === `delete:${task.id}`} onClick={() => removeTask(task)}>删除任务</Btn>
-        <span className="wb-dangerhint">执行历史和证据会保留，任务不再出现在列表。</span>
+          </section> : null}
+          {events.length ? <section className="wb-docsection"><h2>时间线</h2>
+            <ol className="wb-timeline">{events.map(event => <li className="wb-tlitem" key={event.id}>
+              <span className="wb-tltime">{clock(event.createdAt)}</span><span className="wb-tldot run" />
+              <span className="wb-tlbody"><b>{eventLabel(event.eventType)}</b><p>{event.actor ?? '系统'}</p></span>
+            </li>)}</ol>
+          </section> : null}
+          <details className="wb-details">
+            <summary>诊断</summary>
+            <div className="wb-details-body">
+              <div className="wb-kv"><span>任务 ID</span><b>{task.id}</b></div>
+              <div className="wb-kv"><span>需求 ID</span><b>{task.requirementId}</b></div>
+              <div className="wb-kv"><span>项目 ID</span><b>{task.projectId}</b></div>
+              <div className="wb-kv"><span>当前尝试</span><b>{task.currentAttemptId ?? '—'}</b></div>
+              <div className="wb-kv"><span>创建</span><b>{timeAgo(task.createdAt)}</b></div>
+              {fetched?.data?.attempts.length ? <div className="wb-diag-attempts">
+                <h3>执行尝试</h3>
+                {fetched.data.attempts.map(attempt => <div className="wb-diag-row" key={attempt.id}>
+                  <b>{attempt.id}</b><span>{attempt.status} · {attempt.stage ?? '—'}</span>
+                  <small>{timeAgo(attempt.createdAt)}{attempt.endedAt ? ` · 结束 ${timeAgo(attempt.endedAt)}` : ''}</small>
+                </div>)}
+              </div> : null}
+            </div>
+          </details>
+        </main>
+        <aside className="wb-rail">
+          {task.status === '评审' ? <section className="wb-reviewbox wb-railcard" ref={reviewBox}>
+            <div className="wb-railhead">评审结论</div>
+            <p className="wb-railnote">通过后进入待验收；退回后 Agent 继续处理。</p>
+            <textarea className="wb-textarea" rows={3} value={reviewComment} placeholder="意见（可选，退回时写清要改什么）"
+              onChange={event => setReviewComment(event.target.value)} />
+            <div className="wb-formactions">
+              <Btn variant="primary" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '通过')}>通过</Btn>
+              <Btn variant="outline" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '退回')}>退回</Btn>
+            </div>
+          </section> : null}
+          {task.status !== '评审' && task.status !== '完成' && task.status !== '取消' ? <section className="wb-railcard wb-railnext">
+            <div className="wb-railhead">下一步</div>
+            <div className="wb-formactions">{taskActions(task)}</div>
+          </section> : null}
+          <section className="wb-railcard">
+            <div className="wb-railhead">任务信息</div>
+            <div className="wb-settingrow"><span>状态</span><b>{taskStatusLabel(task.status)}</b></div>
+            <div className="wb-settingrow"><span>持棒人</span><b>{holderLabel(signal.holder)}</b></div>
+            <div className="wb-settingrow"><span>需求</span><b>{requirement ? requirement.title : '—'}</b></div>
+            <div className="wb-settingrow"><span>类型</span><b>{task.type}</b></div>
+            <div className="wb-settingrow"><span>优先级</span><b>{task.priority}</b></div>
+            <div className="wb-settingrow"><span>尝试</span><b>{latestAttempt?.id ?? task.currentAttemptId ?? '—'}</b></div>
+          </section>
+          <div className="wb-docfooter">
+            <Btn variant="ghost" size="sm" busy={busy === `delete:${task.id}`} onClick={() => removeTask(task)}>删除任务</Btn>
+            <span className="wb-dangerhint">执行历史和证据会保留，任务不再出现在列表。</span>
+          </div>
+        </aside>
+      </div>
+      <div className="wb-docdock">{taskActions(task)}
+        {task.status === '完成' || task.status === '取消' ? <Btn variant="ghost" size="sm" onClick={() => askAbout(task.id)}>问 Agent</Btn> : null}
       </div>
     </div>
   }
 
-  const work = () => selectedRequirement ? requirementDoc(selectedRequirement)
-    : selectedTask ? taskDoc(selectedTask) : workList()
+  const selectedWork = selectedRequirement ? requirementDoc(selectedRequirement)
+    : selectedTask ? taskDoc(selectedTask) : undefined
+  const work = () => <div className={`wb-workbench ${selectedWork ? 'split' : ''}`}>
+    <div className={`wb-index ${selectedWork ? 'compact' : ''}`}>{workList({ compact: !!selectedWork })}</div>
+    {selectedWork ? <div className="wb-docpane">{selectedWork}</div> : null}
+  </div>
 
   const inboxList = () => {
     const items = inbox.filter(item => inboxProject === 'all' || item.projectId === inboxProject)
@@ -826,7 +1063,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
             <button className="wb-btn wb-btn-outline wb-btn-sm" onClick={openMaster}>＋ 新委托</button>
           </div>
         </header>
-        <div className="wb-view">
+        <div className={`wb-view ${view === 'work' ? 'wb-view-work' : ''}`}>
           {error ? <p className="wb-error">{error.message}</p> : !data ? <p className="wb-loading">正在读取工作台…</p>
             : view === 'today' ? today() : view === 'work' ? work() : view === 'inbox' ? inboxList()
             : view === 'knowledge' ? knowledge() : settings()}

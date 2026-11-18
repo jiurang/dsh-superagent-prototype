@@ -405,7 +405,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/xg/client.ts` | Typed `xgGet` / `xgPost` fetch helpers for `/xg/api` with the same-origin header |
 | `src/client/xg/project-settings.tsx` | The project-scope settings page: root path, sensitivity, default priority, auto-dispatch and an optional Worker model override |
 | `src/client/xg/scope.ts` | Shared project-context key plus `rememberedProject` / `rememberProject` helpers |
-| `src/client/xg/v2/Workbench.tsx` | DSH workbench: today/work/inbox/knowledge/settings views and real actions |
+| `src/client/xg/v2/Workbench.tsx` | DSH workbench: today/work/inbox/knowledge/settings views, the relay work index and its documents, and real actions |
 | `src/client/xg/v2/workbench.css` | Workbench v2 layout using DSH design tokens |
 | `src/client/xg/v2/SettingsPanel.tsx` | Workbench settings tabs: source, eval, execution, prompts, deployment, runtime, project, diagnostics |
 | `src/client/xg/v2/SidebarBadge.tsx` | DSH sidebar footer action counting workbench items that need a person; opens Today |
@@ -461,7 +461,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/class-docs.spec.ts` | Every class in `src` has a JSDoc block before it |
 | `tests/docs.spec.ts` | Numbered documents link only to earlier ones, every local link resolves, no document has merge conflict markers, and this document's tables list every module and every test |
 | `tests/xg-service.spec.ts` | xg inbox, requirement split, dispatch, report, review, acceptance, retry/cancel, triage gate, memory confirmation and search |
-| `tests/xg-v2.spec.tsx` | v2 workbench interactions: today proposal diff, task review form, delete exits and requirement deletion guard |
+| `tests/xg-v2.spec.tsx` | v2 workbench interactions: today proposal diff, relay work index, task review form, delete exits and requirement deletion guard |
 | `tests/xg-dispatch.spec.ts` | `EngineTicketGateway`: an authorized xg task becomes a real Ticket, and a worker report syncs back |
 | `tests/xg-policy.spec.ts` | Sensitive-content kinds, redaction idempotence, sensitivity blocking and nested field guarding |
 | `tests/xg-email.spec.ts` | `.eml` parsing (plain, base64, quoted-printable, folded headers, HTML) and collector dedupe |

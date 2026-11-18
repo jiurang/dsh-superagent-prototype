@@ -169,6 +169,21 @@ it('opens an inbox item and deletes it', async () => {
   expect(readViewState('inbox').inboxId).toBeNull()
 })
 
+it('renders the relay work index and opens a requirement document beside it', async () => {
+  const { element } = await render('work')
+  expect(element.querySelector('.wb-workhead h1')?.textContent).toBe('工作')
+  expect(element.querySelectorAll('.wb-lens')).toHaveLength(4)
+  expect(element.querySelectorAll('.wb-reqblock').length).toBeGreaterThan(0)
+  expect(element.querySelectorAll('.wb-taskrow').length).toBeGreaterThan(0)
+  expect(element.querySelector('.wb-proposalstrip')?.textContent).toContain('拆分')
+  const requirement = element.querySelector<HTMLElement>('.wb-reqmain')!
+  await click(requirement)
+  expect(element.querySelector('.wb-workbench')?.classList.contains('split')).toBe(true)
+  expect(element.querySelector('.wb-workdoc h1')?.textContent).toContain('账单对账优化')
+  expect(element.querySelectorAll('.wb-relay li')).toHaveLength(3)
+  expect(element.querySelector('.wb-rail')).not.toBeNull()
+})
+
 it('guards requirement deletion while it still has live tasks', async () => {
   updateViewState('work', { selection: { kind: 'requirement', id: 'R1' } })
   const { element } = await render('work')
