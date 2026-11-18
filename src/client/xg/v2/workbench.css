@@ -540,7 +540,10 @@
 .wb-agentcard{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border:1px solid var(--wb-teal-line);border-left:2px solid var(--wb-teal);border-radius:0 6px 6px 0;background:var(--wb-teal-soft);margin-top:14px}
 .wb-agentcard.block{border-color:var(--wb-red-line);border-left-color:var(--wb-red);background:var(--wb-red-soft)}
 .wb-agentcard b{display:block;font-size:11px;font-weight:600}
+.wb-agentbody{min-width:0;flex:1}
 .wb-agentcard p{margin:3px 0 0;font-size:11px;line-height:1.6;color:var(--wb-ink2);white-space:pre-wrap}
+.wb-agentcard p.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.wb-agentcard .wb-link{margin-top:4px}
 .wb-agentmeta{margin-top:5px;font-size:9px;color:var(--wb-faint)}
 .wb-reviewrecord{padding:8px 0;border-top:1px solid var(--wb-line);font-size:10.5px}
 .wb-reviewrecord:first-of-type{border-top:0}

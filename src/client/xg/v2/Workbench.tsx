@@ -29,6 +29,7 @@ interface Attention {
 interface SplitRow { title: string; type: TaskType; priority: Priority; description: string; acceptance: string }
 interface SplitDraft { requirement: Requirement; rows: SplitRow[] }
 interface TriageDraft { itemId: string; projectId: string; title: string; priority: Priority; description: string }
+interface RequirementDraft { projectId: string; title: string; description: string; sourceNote: string; priority: Priority }
 
 const asError = (failure: unknown): Error => failure instanceof Error ? failure : new Error(String(failure))
 const firstLine = (value: string | null | undefined): string => (value ?? '').split('\n').find(line => line.trim())?.trim().slice(0, 80) ?? ''
@@ -87,6 +88,8 @@ const holderLabel = (holder: WorkHolder): string => holder === 'you' ? '你持�
   : holder === 'block' ? '等你处理' : holder === 'done' ? '已收口' : '无持棒人'
 const holderTone = (holder: WorkHolder): string => holder === 'you' ? 'you' : holder === 'agent' ? 'agent'
   : holder === 'block' ? 'block' : holder === 'done' ? 'done' : 'idle'
+const holderText = (signal: WorkSignal): string => holderLabel(signal.holder) === signal.next
+  ? holderLabel(signal.holder) : `${holderLabel(signal.holder)} · ${signal.next}`
 const taskSignal = (task: Task): WorkSignal => {
   if (task.status === '就绪') return { holder: 'you', tone: 'you', next: '等你派发', action: 'dispatch' }
   if (task.status === '进行中') return { holder: 'agent', tone: 'agent', next: 'Agent 执行中', action: 'view' }
@@ -236,10 +239,12 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const [memoryProject, setMemoryProject] = useState('all')
   const [triage, setTriage] = useState<TriageDraft | null>(null)
   const [split, setSplit] = useState<SplitDraft | null>(null)
+  const [newRequirement, setNewRequirement] = useState<RequirementDraft | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
   const [openArtifact, setOpenArtifact] = useState<string | null>(null)
+  const [reportOpen, setReportOpen] = useState(false)
   const [reviewComment, setReviewComment] = useState('')
   const center = useRef<HTMLElement | null>(null)
   const reviewBox = useRef<HTMLElement | null>(null)
@@ -271,7 +276,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     return () => clearTimeout(timer)
   }, [toast])
 
-  useEffect(() => { setOpenArtifact(null); setReviewComment('') }, [workSelection?.id])
+  useEffect(() => { setOpenArtifact(null); setReportOpen(false); setReviewComment('') }, [workSelection?.id])
 
   // Open the inbox form once per selected item; later edits must not be overwritten by polling.
   useEffect(() => {
@@ -364,6 +369,26 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     }, '收件已删除')
   }
 
+  const openNewRequirement = () => setNewRequirement({
+    projectId: workProject === 'all' ? projects[0]?.id ?? '' : workProject,
+    title: '', description: '', sourceNote: '人工录入', priority: 'P2',
+  })
+  const submitNewRequirement = () => {
+    if (!newRequirement) return
+    if (!newRequirement.projectId) { setToast('先选一个项目'); return }
+    if (!newRequirement.title.trim()) { setToast('先填需求标题'); return }
+    void action('requirement:new', async () => {
+      const created = await xgPost('/requirements', {
+        projectId: newRequirement.projectId,
+        title: newRequirement.title.trim(),
+        priority: newRequirement.priority,
+        sourceNote: newRequirement.sourceNote.trim() || '人工录入',
+        ...(newRequirement.description.trim() ? { description: newRequirement.description.trim() } : {}),
+      })
+      setNewRequirement(null)
+      updateViewState('work', { selection: { kind: 'requirement', id: created.id } })
+    }, '需求已创建')
+  }
   const openSplit = (requirement: Requirement) => setSplit({ requirement, rows: [{
     title: requirement.title, type: '开发', priority: requirement.priority ?? 'P2',
     description: requirement.description ?? '', acceptance: '',
@@ -386,7 +411,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         ...(row.acceptance.trim() ? { acceptance: row.acceptance.trim() } : {}),
       })) }, { params: { id: split.requirement.id } })
       setSplit(null)
-    }, '已拆成任务')
+    }, split.requirement.status === '已拆分' ? '任务已添加' : '已拆成任务')
   }
 
   const openInboxItem = (item: InboxItem) => {
@@ -642,6 +667,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           </select>
           <input className="wb-worksearch" value={workSearch} onChange={event => setWorkSearch(event.target.value)}
             placeholder="搜标题、编号" aria-label="搜索工作" />
+          <Btn variant="primary" size="sm" onClick={openNewRequirement}>＋ 新需求</Btn>
         </div>
       </div>
       {visibleGroups.length ? visibleGroups.map(group => {
@@ -715,11 +741,12 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const relatedProposals = proposals.filter(proposal => proposal.targetType === 'requirement' && proposal.targetId === requirement.id).slice(0, 5)
     const pendingProposals = relatedProposals.filter(proposal => proposal.status === '待确认').length
     const events = audit.filter(entry => entry.entityId === requirement.id).slice(0, 8)
-    const holder = `${holderLabel(signal.holder)} · ${signal.next}`
+    const holder = holderText(signal)
+    const splitLabel = requirement.status === '已拆分' ? '新增任务' : '自己拆解'
     const actions = <>
       {requirement.status === '待确认' ? <Btn variant="signal" size="sm" busy={busy === `confirm:${requirement.id}`}
         onClick={() => confirmRequirement(requirement)}>确认需求</Btn> : null}
-      {requirement.status !== '已关闭' ? <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>自己拆解</Btn> : null}
+      {requirement.status !== '已关闭' ? <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>{splitLabel}</Btn> : null}
       <Btn variant="ghost" size="sm" onClick={() => askAbout(requirement.id)}>问 Agent</Btn>
     </>
     return <div className="wb-doc wb-workdoc">
@@ -827,10 +854,15 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const events = (fetched?.data?.events ?? []).filter(event => event.eventType !== '产物' && event.eventType !== '绑定工单')
     const latestAttempt = fetched?.data?.attempts.slice()
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
+    const reportEvent = [...(fetched?.data?.events ?? [])].reverse().find(event => event.eventType === '报告')
+    const reportSummary = reportEvent && typeof reportEvent.payload === 'object' && reportEvent.payload !== null
+      && typeof (reportEvent.payload as { summary?: unknown }).summary === 'string'
+      ? (reportEvent.payload as { summary: string }).summary.trim() : ''
     const signal = taskSignal(task)
-    const hasReport = !!(latestAttempt?.attention || latestAttempt?.lastReportAt)
+    const hasReport = !!(latestAttempt?.attention || reportSummary || latestAttempt?.lastReportAt)
+    const attemptLabel = task.status === '评审' ? '已提交评审' : latestAttempt?.status ?? '—'
     const agentTitle = hasReport ? 'Agent 最近汇报' : 'Agent 状态'
-    const agentNote = latestAttempt?.attention
+    const agentNote = latestAttempt?.attention || reportSummary
       || (latestAttempt?.lastReportAt ? `最近汇报 ${timeAgo(latestAttempt.lastReportAt)}`
         : fetched?.data ? task.status === '待验收' ? '交付物和证据已经整理好，等你验收。'
           : task.status === '评审' ? '已提交评审，等待结果。'
@@ -847,7 +879,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         <div className="wb-docheadmain">
           <h1>{task.title}</h1>
           <div className="wb-holderline"><span className={`wb-statechip ${signal.tone}`}>{taskStatusLabel(task.status)}</span>
-            <span className={`wb-holder ${signal.tone}`}><i />{holderLabel(signal.holder)} · {signal.next}</span></div>
+            <span className={`wb-holder ${signal.tone}`}><i />{holderText(signal)}</span></div>
           <div className="wb-docmeta">{task.priority} · {task.type} · {requirement ? requirement.title : task.requirementId} · 更新 {timeAgo(task.updatedAt)}</div>
         </div>
         <div className="wb-docactions">
@@ -859,8 +891,10 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         <main className="wb-docmain">
           <section className={`wb-agentcard ${signal.tone}`}>
             <Dot tone={signal.tone === 'you' ? 'signal' : signal.tone} />
-            <div><b>{agentTitle}</b><p>{agentNote}</p>
-              <div className="wb-agentmeta">阶段 {latestAttempt?.stage ?? '—'} · 尝试 {latestAttempt?.status ?? '—'} · 更新 {timeAgo(task.updatedAt)}</div>
+            <div className="wb-agentbody"><b>{agentTitle}</b><p className={reportOpen ? '' : 'clamp'}>{agentNote}</p>
+              {agentNote.length > 220 ? <button className="wb-link" onClick={() => setReportOpen(value => !value)}>
+                {reportOpen ? '收起汇报' : '展开完整汇报'}</button> : null}
+              <div className="wb-agentmeta">阶段 {latestAttempt?.stage ?? '—'} · 尝试 {attemptLabel} · 更新 {timeAgo(task.updatedAt)}</div>
             </div>
           </section>
           {fetched?.error ? <p className="wb-error">{fetched.error.message}</p> : null}
@@ -1070,9 +1104,36 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         </div>
       </main>
     </div>
+    {newRequirement ? <div className="wb-sheet">
+      <div className="wb-sheetbox">
+        <h2>新增需求</h2>
+        <div className="wb-sub">需求先进入待确认；确认后再拆任务。</div>
+        <div className="wb-formrow">
+          <label className="wb-field">项目<select className="wb-select" value={newRequirement.projectId}
+            onChange={event => setNewRequirement({ ...newRequirement, projectId: event.target.value })}>
+            <option value="">选择项目</option>
+            {projects.map(project => <option key={project.id} value={project.id}>{project.shortCode} {project.name}</option>)}
+          </select></label>
+          <label className="wb-field">优先级<select className="wb-select" value={newRequirement.priority}
+            onChange={event => setNewRequirement({ ...newRequirement, priority: event.target.value as Priority })}>
+            {['P0', 'P1', 'P2', 'P3'].map(value => <option key={value}>{value}</option>)}
+          </select></label>
+        </div>
+        <label className="wb-field" style={{ marginTop: 6 }}>标题<input className="wb-input" autoFocus value={newRequirement.title}
+          onChange={event => setNewRequirement({ ...newRequirement, title: event.target.value })} /></label>
+        <label className="wb-field" style={{ marginTop: 6 }}>描述<textarea className="wb-textarea" rows={3} value={newRequirement.description}
+          onChange={event => setNewRequirement({ ...newRequirement, description: event.target.value })} /></label>
+        <label className="wb-field" style={{ marginTop: 6 }}>来源<input className="wb-input" value={newRequirement.sourceNote}
+          onChange={event => setNewRequirement({ ...newRequirement, sourceNote: event.target.value })} /></label>
+        <div className="wb-formactions">
+          <Btn variant="primary" busy={busy === 'requirement:new'} onClick={submitNewRequirement}>创建需求</Btn>
+          <Btn variant="ghost" onClick={() => setNewRequirement(null)}>取消</Btn>
+        </div>
+      </div>
+    </div> : null}
     {split ? <div className="wb-sheet">
       <div className="wb-sheetbox">
-        <h2>拆解 {split.requirement.id}</h2>
+        <h2>{split.requirement.status === '已拆分' ? '新增任务' : '拆解'} · {split.requirement.id}</h2>
         <div className="wb-sub">{split.requirement.title}</div>
         <div className="wb-splitrows">{split.rows.map((row, index) => <div className="wb-draft" key={index}>
           <div className="wb-formrow">
@@ -1095,7 +1156,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         </div>)}</div>
         <div className="wb-formactions">
           <Btn variant="outline" onClick={addSplitRow}>＋ 加一行</Btn>
-          <Btn variant="primary" busy={busy === 'split'} onClick={submitSplit}>拆成任务</Btn>
+          <Btn variant="primary" busy={busy === 'split'} onClick={submitSplit}>{split.requirement.status === '已拆分' ? '创建任务' : '拆成任务'}</Btn>
           <Btn variant="ghost" onClick={() => setSplit(null)}>取消</Btn>
         </div>
       </div>
