@@ -2,7 +2,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 
 /** Current xg schema version. Bump for every additive migration. */
-export const XG_SCHEMA_VERSION = 3
+export const XG_SCHEMA_VERSION = 4
 
 /** Applied in order; index 0 creates version 1. */
 export const XG_MIGRATIONS: readonly string[] = [
@@ -245,6 +245,32 @@ export const XG_MIGRATIONS: readonly string[] = [
     default_priority TEXT CHECK (default_priority IN ('P0','P1','P2','P3')),
     updated_at       TEXT NOT NULL
   );`,
+  // v4: soft deletion for requirements and inbox items, plus agent proposals awaiting a person.
+  `
+  ALTER TABLE xg_requirements ADD COLUMN deleted_at TEXT;
+  ALTER TABLE xg_inbox_items ADD COLUMN deleted_at TEXT;
+
+  CREATE TABLE xg_proposals (
+    id            TEXT PRIMARY KEY,
+    project_id    TEXT NOT NULL REFERENCES xg_projects(id),
+    kind          TEXT NOT NULL,
+    target_type   TEXT NOT NULL,
+    target_id     TEXT NOT NULL,
+    base_revision TEXT,
+    title         TEXT NOT NULL,
+    summary       TEXT,
+    payload       TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT '待确认'
+                  CHECK (status IN ('待确认','已应用','已拒绝','已过期')),
+    created_by    TEXT NOT NULL,
+    created_at    TEXT NOT NULL,
+    resolved_by   TEXT,
+    resolved_at   TEXT,
+    resolution    TEXT
+  );
+  CREATE INDEX xg_proposals_project_status_idx
+    ON xg_proposals (project_id, status, created_at);
+  `,
 ]
 
 /** Creates or upgrades xg tables; the version lives in `xg_schema_version`, apart from the upstream `kv` schema. */

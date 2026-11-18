@@ -250,6 +250,31 @@
 .wb-projecthead b{font-size:11px}
 .wb-projecthead small{margin-left:auto;font-size:9px;color:var(--wb-faint)}
 
+/* agent proposals and destructive exits */
+.wb-proposals{display:flex;flex-direction:column;gap:8px}
+.wb-proposal{border:1px solid var(--wb-signal-line);border-radius:8px;background:var(--wb-signal-soft);padding:11px 12px}
+.wb-proposal.done{border-color:var(--wb-line);background:var(--wb-surface)}
+.wb-proposalhead{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--wb-faint)}
+.wb-proposalstate{border:1px solid var(--wb-signal-line);border-radius:999px;padding:0 6px;font-size:9px;color:var(--wb-signal)}
+.wb-proposalstate.已应用{color:var(--wb-ok);border-color:color-mix(in srgb,var(--wb-ok) 35%,transparent)}
+.wb-proposalstate.已拒绝,.wb-proposalstate.已过期{color:var(--wb-muted);border-color:var(--wb-line2)}
+.wb-proposaltitle{font-size:12.5px;font-weight:600;line-height:1.45;margin-top:5px}
+.wb-proposalsummary{font-size:11px;line-height:1.6;color:var(--wb-muted);margin:3px 0 0;white-space:pre-wrap}
+.wb-diff{margin-top:8px;border:1px solid var(--wb-line);border-radius:7px;background:var(--wb-paper);overflow:hidden}
+.wb-attndiff{margin-top:7px;max-width:560px}
+.wb-diffrow{display:flex;align-items:baseline;gap:7px;padding:5px 8px;border-top:1px solid var(--wb-line);font-size:10.5px}
+.wb-diffrow:first-child{border-top:0}
+.wb-diffmark{font-family:ui-monospace,Consolas,monospace;font-weight:700;width:10px;flex:none;text-align:center}
+.wb-diffrow.add .wb-diffmark{color:var(--wb-ok)}
+.wb-diffrow.change .wb-diffmark{color:var(--wb-signal)}
+.wb-difftitle{flex:1;min-width:0;overflow-wrap:anywhere}
+.wb-diffrow small{color:var(--wb-faint);font-size:9.5px;white-space:nowrap}
+.wb-proposalresolution{margin:6px 0 0;font-size:10px;color:var(--wb-faint);white-space:pre-wrap}
+.wb-proposalactions{display:flex;gap:5px;margin-top:9px}
+.wb-docfooter{display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:12px;border-top:1px solid var(--wb-line)}
+.wb-dangerhint{font-size:10px;color:var(--wb-faint);line-height:1.5}
+.wb-inboxfoot{display:flex;align-items:center;gap:8px;margin-top:8px}
+
 /* toast / legacy */
 .wb-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--dsw-alias-toast-bg,var(--wb-ink));color:var(--dsw-alias-label-primary-foreground,#fff);padding:8px 12px;border-radius:6px;font-size:11px;box-shadow:0 10px 30px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:.18s;z-index:70;max-width:70%}
 .wb-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}

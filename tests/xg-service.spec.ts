@@ -157,6 +157,62 @@ describe('dispatch, report, review, and acceptance', () => {
     expect(() => service.dispatchTask(t.id)).toThrow('已删除')
   })
 
+  it('soft-deletes requirements once their tasks are gone, and inbox items on demand', () => {
+    const p = project()
+    const r = requirement(p.id)
+    const t = task(p.id, r.id)
+    expect(() => service.deleteRequirement(r.id)).toThrow('还有 1 个未取消的任务')
+    service.deleteTask(t.id)
+    const deleted = service.deleteRequirement(r.id)
+    expect(deleted.deletedAt).toBeTruthy()
+    expect(store.requirements.list().total).toBe(0)
+    expect(store.requirements.list({ includeDeleted: true }).total).toBe(1)
+    expect(store.audit.list({ projectId: p.id }).some(entry => entry.action === '删除需求')).toBe(true)
+
+    const item = service.createInboxItem({ channel: '电话', contact: 'Bob', rawContext: '没事了', projectId: p.id })
+    const gone = service.deleteInbox(item.id)
+    expect(gone.deletedAt).toBeTruthy()
+    expect(store.inbox.list().items.some(entry => entry.id === item.id)).toBe(false)
+    expect(store.inbox.list({ includeDeleted: true }).items.some(entry => entry.id === item.id)).toBe(true)
+    expect(store.audit.list({ projectId: p.id }).some(entry => entry.action === '删除收件')).toBe(true)
+  })
+
+  it('applies and rejects requirement split proposals without touching the target before apply', () => {
+    const p = project()
+    const r = requirement(p.id)
+    const proposal = service.createProposal({ kind: 'requirement.split', targetType: 'requirement', targetId: r.id,
+      title: '把登录修复拆成两个任务', summary: '接口和测试分开', createdBy: '智能体',
+      payload: { tasks: [{ title: '改登录接口', type: '开发', priority: 'P1' }, { title: '写登录测试', type: '评审', priority: 'P2' }] } })
+    expect(proposal.status).toBe('待确认')
+    expect(store.tasks.list().total).toBe(0)
+    expect(store.requirements.get(r.id)?.status).toBe('待确认')
+
+    const applied = service.applyProposal(proposal.id)
+    expect(applied.proposal.status).toBe('已应用')
+    expect(applied.tasks.map(task => task.id)).toEqual(['BIL-1', 'BIL-2'])
+    expect(applied.requirement.status).toBe('已拆分')
+    expect(store.audit.list({ projectId: p.id }).some(entry => entry.action === '应用提案')).toBe(true)
+    expect(() => service.applyProposal(proposal.id)).toThrow('提案已处理')
+
+    const second = service.createProposal({ kind: 'requirement.split', targetType: 'requirement', targetId: r.id,
+      title: '再拆一次', payload: { tasks: [{ title: '多余任务', type: '开发', priority: 'P3' }] } })
+    const rejected = service.rejectProposal(second.id, '不需要')
+    expect(rejected.status).toBe('已拒绝')
+    expect(rejected.resolution).toBe('不需要')
+    expect(store.tasks.list().total).toBe(2)
+  })
+
+  it('expires a proposal when its target changed after drafting', () => {
+    const p = project()
+    const r = requirement(p.id)
+    const proposal = service.createProposal({ kind: 'requirement.split', targetType: 'requirement', targetId: r.id,
+      title: '拆解', payload: { tasks: [{ title: '任务', type: '开发', priority: 'P2' }] } })
+    db.prepare('UPDATE xg_requirements SET updated_at=? WHERE id=?').run('2026-11-17T01:00:00.000Z', r.id)
+    expect(() => service.applyProposal(proposal.id)).toThrow('提案已过期')
+    expect(store.proposals.get(proposal.id)?.status).toBe('已过期')
+    expect(store.tasks.list().total).toBe(0)
+  })
+
   it('refuses to create a queued Ticket while the deployment is blocked', () => {
     const p = project()
     const r = requirement(p.id)

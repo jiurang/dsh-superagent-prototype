@@ -16,6 +16,7 @@ export const REVIEW_DECISIONS = ['通过', '退回'] as const
 export const ARTIFACT_TYPES = ['证据', '代码', '文档', '复盘', '其他'] as const
 export const TRIAGE_STAGES = ['取证', '假设', '根因'] as const
 export const SPEC_STATUSES = ['草稿', '已批准', '已废弃'] as const
+export const PROPOSAL_STATUSES = ['待确认', '已应用', '已拒绝', '已过期'] as const
 
 export type ProjectStatus = typeof PROJECT_STATUSES[number]
 export type Sensitivity = typeof SENSITIVITIES[number]
@@ -34,6 +35,7 @@ export type ReviewDecision = typeof REVIEW_DECISIONS[number]
 export type ArtifactType = typeof ARTIFACT_TYPES[number]
 export type TriageStage = typeof TRIAGE_STAGES[number]
 export type SpecStatus = typeof SPEC_STATUSES[number]
+export type ProposalStatus = typeof PROPOSAL_STATUSES[number]
 
 export interface Project {
   id: string
@@ -56,6 +58,8 @@ export interface InboxItem {
   status: InboxStatus
   receivedAt: string
   triagedAt: string | null
+  /** Soft-deleted items leave lists but stay for audit. */
+  deletedAt: string | null
 }
 
 /** Project-level overrides; system settings remain the upstream instance settings. */
@@ -79,6 +83,8 @@ export interface Requirement {
   description: string | null
   status: RequirementStatus
   priority: Priority | null
+  /** Soft-deleted requirements leave lists but stay for audit. */
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -213,6 +219,25 @@ export interface Spec {
   approvedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** One agent-authored change that waits for a person (or an authorized agent) to apply it. */
+export interface Proposal {
+  id: string
+  projectId: string
+  kind: string
+  targetType: string
+  targetId: string
+  baseRevision: string | null
+  title: string
+  summary: string | null
+  payload: unknown
+  status: ProposalStatus
+  createdBy: string
+  createdAt: string
+  resolvedBy: string | null
+  resolvedAt: string | null
+  resolution: string | null
 }
 
 export interface Page<T> {

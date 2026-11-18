@@ -389,14 +389,14 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/text.ts` | Copy by key and the wording of domain values, reasons, senders and times |
 | `src/client/locales.ts` | All copy in both languages, and the glossary of [001 Domain model](001-domain.md) |
 | `src/client/client.css`, `css.d.ts` | The panel's stylesheet, loaded as text |
-| `src/xg/domain.ts` | The xg business vocabulary: project, inbox, requirement, task, attempt, memory, review, artifact, triage, spec, event and audit types with their closed enums |
+| `src/xg/domain.ts` | The xg business vocabulary: project, inbox, requirement, task, attempt, memory, review, artifact, triage, spec, agent proposal, event and audit types with their closed enums |
 | `src/xg/ids.ts` | Readable IDs for projects, requirements, tasks and attempts, and project short-code normalization |
 | `src/xg/schema.ts` | The xg schema, its triggers and FTS5 table, versioned separately from the orchestrator schema by `migrateXg` |
-| `src/xg/store.ts` | `XgStore`, repositories for every xg table, transactions, task/attempt queries, memory search, backup and audit |
+| `src/xg/store.ts` | `XgStore`, repositories for every xg table, transactions, task/attempt queries, soft deletion, proposals, memory search, backup and audit |
 | `src/xg/policy.ts` | `XgPolicy`: sensitive-content scanning, redaction, blocking by project sensitivity and recursive field guarding; `auditSummary` |
 | `src/xg/local.ts` | The `local` Source kind: root path for a local project, no GitHub/Feishu connection, and the switch for local deployment mode |
 | `src/xg/email.ts` | `parseEml` and `EmailCollector`: offline `.eml` parsing, MIME transfer decoding, HTML stripping, directory polling and inbox dedupe |
-| `src/xg/service.ts` | `XgService`: inbox triage, requirement split, task lifecycle, dispatch, reports, triage gate, review, acceptance, memory lifecycle, Ticket sync; `EngineTicketGateway` |
+| `src/xg/service.ts` | `XgService`: inbox triage, requirement split/delete, task lifecycle and delete, dispatch, reports, triage gate, review, acceptance, proposal apply/reject, memory lifecycle, Ticket sync; `EngineTicketGateway` |
 | `src/xg/tools.ts` | The `xg.*` tools for Worker and main Sessions, with Ticket-scoped project resolution and outbound guarding |
 | `src/xg/http.ts` | The loopback `/xg/api` routes used by the workbench panel |
 | `src/xg/api-contract.ts` | The type-only contract between the xg panel and its HTTP routes |

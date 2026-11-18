@@ -49,8 +49,27 @@ it('serves the xg panel API on the loopback same-origin contract', async () => {
     .toMatchObject({ status: 200, body: { status: '已批准', content: '登录超时 5s 重试' } })
   expect(await call('GET', 'projects')).toMatchObject({ status: 200, body: { total: 1 } })
   expect(await call('GET', 'reviews')).toMatchObject({ status: 200, body: { total: 0 } })
+
+  const second = await call('POST', 'requirements', { projectId, title: '提案需求', sourceNote: '人工' })
+  const secondId = String((second.body as { id: string }).id)
+  const proposal = await call('POST', 'proposals', { kind: 'requirement.split', targetType: 'requirement', targetId: secondId,
+    title: '拆成任务', payload: { tasks: [{ title: '提案任务', type: '开发', priority: 'P2' }] } })
+  expect(proposal).toMatchObject({ status: 200, body: { status: '待确认', targetId: secondId } })
+  const proposalId = String((proposal.body as { id: string }).id)
+  expect(await call('GET', 'proposals')).toMatchObject({ status: 200, body: { total: 1 } })
+  expect(await call('POST', `proposals/${proposalId}/reject`, { reason: '先不做' }))
+    .toMatchObject({ status: 200, body: { status: '已拒绝', resolution: '先不做' } })
+  expect(await call('POST', `requirements/${secondId}/delete`)).toMatchObject({ status: 200, body: { deletedAt: expect.any(String) } })
+
+  const inbox = await call('POST', 'inbox', { channel: '电话', contact: 'Bob', rawContext: '测试', projectId })
+  const inboxId = String((inbox.body as { id: string }).id)
+  expect(await call('POST', `inbox/${inboxId}/delete`)).toMatchObject({ status: 200, body: { deletedAt: expect.any(String) } })
+  expect(await call('GET', 'inbox')).toMatchObject({ status: 200, body: { total: 0 } })
+
   expect(await call('POST', `tasks/${taskId}/delete`)).toMatchObject({ status: 200, body: { deletedAt: expect.any(String) } })
   expect(await call('GET', 'tasks')).toMatchObject({ status: 200, body: { total: 0 } })
+  expect(await call('POST', `requirements/${requirementId}/delete`)).toMatchObject({ status: 200, body: { deletedAt: expect.any(String) } })
+  expect(await call('GET', 'workbench')).toMatchObject({ status: 200, body: { proposals: [{ status: '已拒绝' }] } })
 })
 
 it('rejects requests without the same-origin panel headers', async () => {

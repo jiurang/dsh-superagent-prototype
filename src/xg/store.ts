@@ -3,8 +3,8 @@ import { copyFileSync } from 'node:fs'
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import type {
   Artifact, ArtifactType, Attempt, AttemptStatus, AuditEntry, InboxChannel, InboxItem, InboxStatus, MemoryEntry, MemoryRef, MemoryRefType,
-  MemorySourceType, MemoryStatus, MemoryType, Page, Priority, Project, ProjectSettings, ProjectStatus, Requirement, RequirementStatus, Review, ReviewDecision,
-  Sensitivity, Spec, SpecStatus, Task, TaskEvent, TaskStatus, TaskType, TriageStage, TriageStep,
+  MemorySourceType, MemoryStatus, MemoryType, Page, Priority, Proposal, ProposalStatus, Project, ProjectSettings, ProjectStatus, Requirement,
+  RequirementStatus, Review, ReviewDecision, Sensitivity, Spec, SpecStatus, Task, TaskEvent, TaskStatus, TaskType, TriageStage, TriageStep,
 } from './domain.ts'
 import { newId, normalizeShortCode, requirementId as requirementIdOf, taskId as taskIdOf } from './ids.ts'
 import { migrateXg } from './schema.ts'
@@ -44,13 +44,13 @@ const projectSettingsOf = (row: Row | undefined, projectId: string): ProjectSett
 const inboxOf = (row: Row): InboxItem => ({
   id: text(row.id), projectId: nullable(row.project_id), channel: text(row.channel) as InboxChannel, contact: nullable(row.contact),
   rawContext: nullable(row.raw_context), externalRef: nullable(row.external_ref), status: text(row.status) as InboxStatus,
-  receivedAt: text(row.received_at), triagedAt: nullable(row.triaged_at),
+  receivedAt: text(row.received_at), triagedAt: nullable(row.triaged_at), deletedAt: nullable(row.deleted_at),
 })
 const requirementOf = (row: Row): Requirement => ({
   id: text(row.id), projectId: text(row.project_id), seqNo: number(row.seq_no), sourceId: nullable(row.source_id),
   sourceNote: nullable(row.source_note), title: text(row.title), description: nullable(row.description),
   status: text(row.status) as RequirementStatus, priority: nullable(row.priority) as Priority | null,
-  createdAt: text(row.created_at), updatedAt: text(row.updated_at),
+  deletedAt: nullable(row.deleted_at), createdAt: text(row.created_at), updatedAt: text(row.updated_at),
 })
 const taskOf = (row: Row): Task => ({
   id: text(row.id), projectId: text(row.project_id), requirementId: text(row.requirement_id), seqNo: number(row.seq_no),
@@ -104,6 +104,13 @@ const specOf = (row: Row): Spec => ({
   status: text(row.status) as SpecStatus, approvedBy: nullable(row.approved_by), approvedAt: nullable(row.approved_at),
   createdAt: text(row.created_at), updatedAt: text(row.updated_at),
 })
+const proposalOf = (row: Row): Proposal => ({
+  id: text(row.id), projectId: text(row.project_id), kind: text(row.kind), targetType: text(row.target_type),
+  targetId: text(row.target_id), baseRevision: nullable(row.base_revision), title: text(row.title), summary: nullable(row.summary),
+  payload: json(row.payload), status: text(row.status) as ProposalStatus, createdBy: text(row.created_by),
+  createdAt: text(row.created_at), resolvedBy: nullable(row.resolved_by), resolvedAt: nullable(row.resolved_at),
+  resolution: nullable(row.resolution),
+})
 
 export interface StoreOptions {
   /** Clock used for every inserted timestamp; tests inject a deterministic one. */
@@ -135,6 +142,13 @@ export interface UpdateAttempt {
   ticketId?: string | null; assignmentId?: string | null; workerSessionId?: string | null; stage?: string | null
   status?: AttemptStatus; lastReportAt?: string | null; attention?: string | null; tokenCost?: number | null
   runtimeVersion?: string | null; endedAt?: string | null
+}
+export interface CreateProposal {
+  projectId: string; kind: string; targetType: string; targetId: string; baseRevision?: string | null
+  title: string; summary?: string | null; payload: unknown; createdBy?: string
+}
+export interface ResolveProposal {
+  status: ProposalStatus; resolvedBy: string; resolution?: string | null
 }
 export interface CreateMemory {
   projectId: string; type: MemoryType; title: string; content: string; status?: MemoryStatus
@@ -273,8 +287,8 @@ export class XgStore {
       const row = this.one('SELECT * FROM xg_inbox_items WHERE id = ?', id)
       return row ? inboxOf(row) : undefined
     },
-    list: (filter: { projectId?: string; status?: InboxStatus; limit?: number } = {}): Page<InboxItem> => {
-      const clauses = ['1=1'], values: SQLInputValue[] = []
+    list: (filter: { projectId?: string; status?: InboxStatus; limit?: number; includeDeleted?: boolean } = {}): Page<InboxItem> => {
+      const clauses = [filter.includeDeleted ? '1=1' : 'deleted_at IS NULL'], values: SQLInputValue[] = []
       if (filter.projectId) { clauses.push('project_id = ?'); values.push(filter.projectId) }
       if (filter.status) { clauses.push('status = ?'); values.push(filter.status) }
       const where = clauses.join(' AND ')
@@ -285,6 +299,12 @@ export class XgStore {
     },
     markTriaged: (id: string, status: Exclude<InboxStatus, '未处理'> = '已建需求'): InboxItem => {
       this.db.prepare('UPDATE xg_inbox_items SET status=?, triaged_at=? WHERE id=?').run(status, this.now(), id)
+      const item = this.inbox.get(id)
+      if (!item) throw new Error(`收件不存在：${id}`)
+      return item
+    },
+    delete: (id: string, at = this.now()): InboxItem => {
+      this.db.prepare('UPDATE xg_inbox_items SET deleted_at=? WHERE id=?').run(at, id)
       const item = this.inbox.get(id)
       if (!item) throw new Error(`收件不存在：${id}`)
       return item
@@ -307,8 +327,8 @@ export class XgStore {
       const row = this.one('SELECT * FROM xg_requirements WHERE id = ?', id)
       return row ? requirementOf(row) : undefined
     },
-    list: (filter: { projectId?: string; status?: RequirementStatus; limit?: number } = {}): Page<Requirement> => {
-      const clauses = ['1=1'], values: SQLInputValue[] = []
+    list: (filter: { projectId?: string; status?: RequirementStatus; limit?: number; includeDeleted?: boolean } = {}): Page<Requirement> => {
+      const clauses = [filter.includeDeleted ? '1=1' : 'deleted_at IS NULL'], values: SQLInputValue[] = []
       if (filter.projectId) { clauses.push('project_id = ?'); values.push(filter.projectId) }
       if (filter.status) { clauses.push('status = ?'); values.push(filter.status) }
       const where = clauses.join(' AND ')
@@ -324,6 +344,12 @@ export class XgStore {
         .run(patch.title ?? current.title, patch.description === undefined ? current.description : patch.description,
           patch.status ?? current.status, patch.priority === undefined ? current.priority : patch.priority, this.now(), id)
       return this.requirements.get(id)!
+    },
+    delete: (id: string, at = this.now()): Requirement => {
+      this.db.prepare('UPDATE xg_requirements SET deleted_at=?, updated_at=? WHERE id=?').run(at, at, id)
+      const requirement = this.requirements.get(id)
+      if (!requirement) throw new Error(`需求不存在：${id}`)
+      return requirement
     },
   }
 
@@ -533,6 +559,43 @@ export class XgStore {
       const spec = this.specs.get(id)
       if (!spec) throw new Error(`规格不存在：${id}`)
       return spec
+    },
+  }
+
+  readonly proposals = {
+    create: (input: CreateProposal): Proposal => {
+      this.requireProject(input.projectId)
+      const id = newId('PROP'), at = this.now()
+      this.db.prepare(`INSERT INTO xg_proposals
+        (id, project_id, kind, target_type, target_id, base_revision, title, summary, payload, status, created_by,
+         created_at, resolved_by, resolved_at, resolution)
+        VALUES (?,?,?,?,?,?,?,?,?,'待确认',?,?,NULL,NULL,NULL)`)
+        .run(id, input.projectId, input.kind, input.targetType, input.targetId, input.baseRevision ?? null,
+          input.title.trim(), input.summary ?? null, JSON.stringify(input.payload), input.createdBy ?? '智能体', at)
+      return this.proposals.get(id)!
+    },
+    get: (id: string): Proposal | undefined => {
+      const row = this.one('SELECT * FROM xg_proposals WHERE id = ?', id)
+      return row ? proposalOf(row) : undefined
+    },
+    list: (filter: { projectId?: string; status?: ProposalStatus; targetType?: string; targetId?: string; limit?: number } = {}): Page<Proposal> => {
+      const clauses = ['1=1'], values: SQLInputValue[] = []
+      for (const [column, value] of [['project_id', filter.projectId], ['status', filter.status],
+        ['target_type', filter.targetType], ['target_id', filter.targetId]] as const) {
+        if (value !== undefined) { clauses.push(`${column} = ?`); values.push(value) }
+      }
+      const where = clauses.join(' AND ')
+      const total = number(this.one(`SELECT COUNT(*) AS total FROM xg_proposals WHERE ${where}`, ...values)?.total)
+      const items = this.all(`SELECT * FROM xg_proposals WHERE ${where} ORDER BY created_at DESC, id DESC LIMIT ?`,
+        ...values, filter.limit ?? 200).map(proposalOf)
+      return { items, total }
+    },
+    resolve: (id: string, patch: ResolveProposal): Proposal => {
+      this.db.prepare(`UPDATE xg_proposals SET status=?, resolved_by=?, resolved_at=?, resolution=? WHERE id=?`)
+        .run(patch.status, patch.resolvedBy, this.now(), patch.resolution ?? null, id)
+      const proposal = this.proposals.get(id)
+      if (!proposal) throw new Error(`提案不存在：${id}`)
+      return proposal
     },
   }
 

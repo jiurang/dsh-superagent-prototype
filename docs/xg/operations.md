@@ -110,11 +110,26 @@ curl -H 'x-orchestrator-request: 1' http://127.0.0.1:3082/xg/api/tasks
 
 ## 智能体如何感知工作台
 
-- **主控 Session**：启动时会收到“雄大工作台”系统提示，并可调用 `xg.project.list`、`xg.task.list`、`xg.overview`、`xg.requirement.list`、`xg.memory.list` 读取当前项目、任务、需求和记忆；再按任务 ID 调用 `xg.task.get` / `xg.review.get`。新建的「雄大 · 主 Session」会话也会挂载这些工具，不再只限 orchestrator 的 master Session。
+- **主控 Session**：启动时会收到“雄大工作台”系统提示，并可调用 `xg.project.list`、`xg.task.list`、`xg.overview`、`xg.requirement.list`、`xg.memory.list` 读取当前项目、任务、需求和记忆；再按任务 ID 调用 `xg.task.get` / `xg.review.get`；拆解需求用 `xg.proposal.create` 提交提案，用 `xg.proposal.list` 查看。新建的「雄大 · 主 Session」会话也会挂载这些工具，不再只限 orchestrator 的 master Session。
 - **Worker Session**：Ticket 绑定 xg 任务后，收到任务专属提示，可调用 `xg.task.get`、`xg.task.report`、`xg.artifact.add`、`xg.triage.record`、`xg.memory.search/propose`。
 - 上游 Ticket/Thread 列表不是业务任务列表；业务任务始终以 `xg_tasks` 为准。
 
-当前主控只能**读**工作台和做评审/验收/记忆提案；创建需求、拆任务、分诊收件仍由人在面板操作。
+主控可以**读**工作台、做评审/验收/记忆提案，并通过 `xg.proposal.create` 提交需求拆解提案；提案不会直接落库，人在面板看过 diff 点「应用」后才创建任务。创建需求、分诊收件仍由人在面板操作。
+
+## Agent 提案
+
+```text
+主控 xg.proposal.create
+  → xg_proposals（待确认，记录目标当时的 updated_at）
+  → 今天 / 需求文档显示提案卡和 diff
+      ├─ 应用 → 校验目标 revision → 拆任务 + 改需求状态 + 审计
+      ├─ 拒绝 → 记录原因，目标不变
+      └─ 目标已变 → 提案过期，Agent 需重新起草
+```
+
+- 目前支持 `requirement.split`：把需求拆成任务。
+- 派发、验收、取消仍由人直接操作，不进入提案。
+- 原始 payload、目标 ID 和 revision 在「诊断」里可见，正文只显示人话 diff。
 
 ## 派发前置条件
 
@@ -141,6 +156,7 @@ curl -H 'x-orchestrator-request: 1' http://127.0.0.1:3082/xg/api/tasks
 - 重试创建新 Attempt，不创建新业务任务。
 - 取消会调用 `Engine.stopTicket`，并撤回 Mandate。
 - 删除是软删除：任务从列表和统计消失，`xg_attempts`、证据、记忆和审计保留；删除活动任务会先停止 Ticket。
+- 需求只有在没有未取消任务时才能删除；有任务时先取消或删除任务。收件可以直接删除。需求、收件和任务都保留在数据库与审计里，只是不再出现在列表。
 
 ## 排障门禁
 

@@ -1,7 +1,7 @@
 /** Type-only contract between the xg business pages and the `/xg/api` routes. */
 import type {
-  Artifact, Attempt, AuditEntry, InboxItem, InboxStatus, MemoryEntry, MemoryStatus, Project, ProjectSettings, Requirement, Review, Spec, Task,
-  TaskEvent, TaskStatus, TaskType, TriageStep,
+  Artifact, Attempt, AuditEntry, InboxItem, InboxStatus, MemoryEntry, MemoryStatus, Proposal, ProposalStatus, Project, ProjectSettings,
+  Requirement, Review, Spec, Task, TaskEvent, TaskStatus, TaskType, TriageStep,
 } from './domain.ts'
 
 export interface XgTaskDetail {
@@ -33,6 +33,7 @@ export interface XgWorkbench {
   tasks: Task[]
   inbox: InboxItem[]
   memory: MemoryEntry[]
+  proposals: Proposal[]
   reviews: (Review & { taskTitle: string })[]
   audit: AuditEntry[]
 }
@@ -69,10 +70,18 @@ export interface XgApi {
   'POST /requirements': { body: { projectId: string; title: string; description?: string; sourceNote?: string; priority?: Requirement['priority'] }; response: Requirement }
   'POST /requirements/:id/confirm': { response: Requirement }
   'POST /requirements/:id/split': { body: { tasks: XgTaskSplitInput[] }; response: { requirement: Requirement; tasks: Task[] } }
+  'POST /requirements/:id/delete': { response: Requirement }
   'GET /inbox': { query?: { projectId?: string; status?: InboxStatus }; response: { items: InboxItem[]; total: number } }
   'POST /inbox': { body: { channel: InboxItem['channel']; contact?: string; rawContext?: string; projectId?: string; externalRef?: string }; response: InboxItem }
   'POST /inbox/:id/triage': { body: { projectId: string; title: string; description?: string; priority?: Requirement['priority'] }; response: { item: InboxItem; requirement: Requirement } }
   'POST /inbox/:id/ignore': { response: InboxItem }
+  'POST /inbox/:id/delete': { response: InboxItem }
+  'GET /proposals': { query?: { projectId?: string; status?: ProposalStatus; targetType?: string; targetId?: string };
+    response: { items: Proposal[]; total: number } }
+  'POST /proposals': { body: { kind: 'requirement.split'; targetType: 'requirement'; targetId: string; title: string; summary?: string;
+    payload: { tasks: XgTaskSplitInput[] }; createdBy?: string }; response: Proposal }
+  'POST /proposals/:id/apply': { body: { by?: string }; response: { proposal: Proposal; requirement: Requirement; tasks: Task[] } }
+  'POST /proposals/:id/reject': { body: { by?: string; reason?: string }; response: Proposal }
   'GET /tasks': { query?: { projectId?: string; status?: TaskStatus; type?: TaskType }; response: { items: Task[]; total: number } }
   'GET /tasks/:id': { response: XgTaskDetail }
   'POST /tasks': { body: XgTaskInput; response: Task }

@@ -10,13 +10,9 @@
 - 工作项详情降噪：标题/状态 sticky；空 section 折叠；证据只显示标题/类型/时间，正文按需展开；Attempt、原始 ID、审计进「诊断」；事件类型改成「任务创建 / 开始执行 / 提交证据 / 状态更新 / 提交评审」等人话。
 - 主界面去 raw ID：今天、工作列表、工作项详情不再显示 Attempt/Ticket ID；项目短码和优先级保留；原始 ID 只在诊断里。
 - 空间：工作区最大宽度 850 → 960px，文档 760 → 900px；DSH 侧栏底部加了「需要你 N」入口（总数量，点击打开今天）。逐项 badge 受 DSH 侧栏契约限制，暂用页面标题计数。
-- `test:xg` 58 个通过；docs/styles/client 测试通过。
-
-## P2 · Agent 提案 / diff
-
-**现象**：原型里的「Agent 提案卡 + diff」尚未接入；当前按钮直接调用真实 API。
-
-**方案**：主 Session 的写工具只产出 proposal；面板展示 diff，人确认后应用；保留 revision 校验。
+- Agent 提案 / diff：`xg_proposals` 表、service/API/`xg.proposal.create` / `xg.proposal.list`；今天和需求文档显示拆解 diff，应用前校验 revision；拒绝记录原因；目标变了标记过期。
+- 无用数据出口：需求、任务、收件都可软删除；需求下还有未取消任务时阻止删除并提示先处理任务；删除写审计并从列表/统计消失。
+- `test:xg` 62 个通过；docs/styles/client 测试通过。
 
 ## P3 · 运行状态页
 

@@ -9,6 +9,7 @@ export function SidebarBadge({ wide, onOpen }: { wide: boolean; onOpen: () => vo
     + data.tasks.filter(task => task.status === '待验收' || task.status === '阻塞' || task.status === '就绪').length
     + data.inbox.filter(item => item.status === '未处理').length
     + data.memory.filter(entry => entry.status === '待复核').length
+    + (data.proposals ?? []).filter(proposal => proposal.status === '待确认').length
   if (!count) return null
   return <button type="button" onClick={onOpen} title={`${count} 项需要你处理`} aria-label={`${count} 项需要你处理`} style={{
     display: 'flex', alignItems: 'center', justifyContent: wide ? 'flex-start' : 'center', gap: 6,

@@ -180,6 +180,36 @@ export function xgTools(host: XgToolsHost, scope: XgToolScope): Tool[] {
       },
     }),
     tool({
+      name: 'xg.proposal.create',
+      description: '提交一条需求拆解提案。不会直接创建任务：人看 diff 后点“应用”才会落库。用于把确认过的需求拆成可执行任务。',
+      schema: z.object({
+        requirement_id: z.string().min(1),
+        title: z.string().trim().min(1).max(200),
+        summary: z.string().trim().max(2000).optional(),
+        tasks: z.array(z.object({
+          title: z.string().trim().min(1).max(200),
+          type: z.enum(TASK_TYPES),
+          priority: z.enum(['P0', 'P1', 'P2', 'P3']),
+          description: z.string().max(5000).optional(),
+          acceptance: z.string().max(5000).optional(),
+        })).min(1).max(20),
+      }).strict(),
+      execute: async (args: { requirement_id: string; title: string; summary?: string;
+        tasks: { title: string; type: TaskType; priority: 'P0' | 'P1' | 'P2' | 'P3'; description?: string; acceptance?: string }[] }) =>
+        host.service.createProposal({ kind: 'requirement.split', targetType: 'requirement', targetId: args.requirement_id,
+          title: args.title, summary: args.summary, payload: { tasks: args.tasks }, createdBy: '智能体' }),
+    }),
+    tool({
+      name: 'xg.proposal.list',
+      description: '查看工作台的 Agent 提案，默认只看待确认；应用和拒绝由人操作。',
+      schema: z.object({
+        status: z.enum(['待确认', '已应用', '已拒绝', '已过期']).default('待确认'),
+        limit: z.number().int().min(1).max(100).default(30),
+      }).strict(),
+      execute: async (args: { status: '待确认' | '已应用' | '已拒绝' | '已过期'; limit: number }) =>
+        host.service.listProposals({ status: args.status, limit: args.limit }),
+    }),
+    tool({
       name: 'xg.inbox.list',
       description: '读取未处理收件（企微、邮箱、电话、同事、其他），只读；建需求和拆任务由人确认。',
       schema: z.object({ limit: z.number().int().min(1).max(100).default(30) }).strict(),
@@ -322,7 +352,8 @@ export function xgTools(host: XgToolsHost, scope: XgToolScope): Tool[] {
 /** Tool names a worker or the main Session may see; the xg tools are registered per Session, not globally. */
 export const XG_TOOL_NAMES = ['xg.project.list', 'xg.task.list', 'xg.overview', 'xg.requirement.list', 'xg.memory.list',
   'xg.task.get', 'xg.task.report', 'xg.artifact.add', 'xg.triage.record', 'xg.memory.search', 'xg.memory.propose',
-  'xg.attention.raise', 'xg.review.get', 'xg.review.submit', 'xg.task.accept', 'xg.inbox.list', 'xg.requirement.get'] as const
+  'xg.attention.raise', 'xg.review.get', 'xg.review.submit', 'xg.task.accept', 'xg.inbox.list', 'xg.requirement.get',
+  'xg.proposal.create', 'xg.proposal.list'] as const
 
 export type XgToolName = typeof XG_TOOL_NAMES[number]
 export type { TaskType }

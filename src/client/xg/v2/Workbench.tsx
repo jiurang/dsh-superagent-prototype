@@ -1,7 +1,7 @@
 /** Workbench v2: a three-column, real-data workbench inside the DSH main panel. */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { XgTaskDetail, XgWorkbench } from '../../../xg/api-contract.ts'
-import type { InboxItem, MemoryEntry, Priority, Project, Requirement, Task, TaskStatus, TaskType } from '../../../xg/domain.ts'
+import type { InboxItem, MemoryEntry, Priority, Proposal, Project, Requirement, Task, TaskStatus, TaskType } from '../../../xg/domain.ts'
 import { usePoll } from '../../api.ts'
 import type { DeploymentForm } from '../../deployment.tsx'
 import { usePanel, usePanelData } from '../../provider.tsx'
@@ -10,7 +10,7 @@ import { readViewState, subscribeViewState, updateViewState, type WorkbenchSelec
 import { SettingsPanel } from './SettingsPanel.tsx'
 import STYLES from './workbench.css?raw'
 
-type AttentionKind = 'blocked' | 'accept' | 'requirement' | 'inbox' | 'memory' | 'dispatch'
+type AttentionKind = 'blocked' | 'accept' | 'requirement' | 'proposal' | 'inbox' | 'memory' | 'dispatch'
 
 interface Attention {
   key: string
@@ -22,6 +22,7 @@ interface Attention {
   project?: Project
   requirement?: Requirement
   task?: Task
+  proposal?: Proposal
   inboxItem?: InboxItem
   memory?: MemoryEntry
 }
@@ -73,7 +74,11 @@ const eventLabel = (type: string): string => {
   return labels[type] ?? type
 }
 const priorityRank = (priority: Priority | null): number => priority === 'P0' ? 0 : priority === 'P1' ? 1 : priority === 'P2' ? 2 : 3
-const attentionRank: Record<AttentionKind, number> = { blocked: 0, accept: 1, requirement: 2, inbox: 3, memory: 4, dispatch: 5 }
+const attentionRank: Record<AttentionKind, number> = { blocked: 0, accept: 1, requirement: 2, proposal: 3, inbox: 4, memory: 5, dispatch: 6 }
+const proposalTaskRows = (proposal: Proposal): { title?: string; type?: string; priority?: string; description?: string; acceptance?: string }[] => {
+  const payload = proposal.payload as { tasks?: unknown } | null | undefined
+  return Array.isArray(payload?.tasks) ? payload.tasks as { title?: string; type?: string; priority?: string }[] : []
+}
 
 function buildAttention(data: XgWorkbench | undefined): Attention[] {
   if (!data) return []
@@ -97,6 +102,13 @@ function buildAttention(data: XgWorkbench | undefined): Attention[] {
       items.push({ key: `dispatch:${task.id}`, kind: 'dispatch', title: task.title, meta: '待派发，等待你',
         at: task.updatedAt, priority: task.priority, project, task })
     }
+  }
+  for (const proposal of data.proposals ?? []) {
+    if (proposal.status !== '待确认') continue
+    const target = proposal.targetType === 'requirement' ? data.requirements.find(item => item.id === proposal.targetId) : undefined
+    items.push({ key: `proposal:${proposal.id}`, kind: 'proposal', title: proposal.title,
+      meta: proposal.summary || 'Agent 想改工作台，等你确认', at: proposal.createdAt,
+      priority: target?.priority ?? null, project: projects.get(proposal.projectId), requirement: target, proposal })
   }
   for (const item of data.inbox) {
     if (item.status !== '未处理') continue
@@ -137,11 +149,11 @@ function ProjectTag({ project }: { project?: Project }) {
 function Dot({ tone }: { tone: string }) {
   return <span className={`wb-dot ${tone}`} />
 }
-function Btn({ variant = 'outline', size, busy, children, onClick, title }: {
-  variant?: 'primary' | 'signal' | 'outline' | 'ghost'; size?: 'sm'; busy?: boolean; children: ReactNode
+function Btn({ variant = 'outline', size, busy, disabled, children, onClick, title }: {
+  variant?: 'primary' | 'signal' | 'outline' | 'ghost'; size?: 'sm'; busy?: boolean; disabled?: boolean; children: ReactNode
   onClick?: () => void; title?: string
 }) {
-  return <button type="button" className={`wb-btn wb-btn-${variant}${size === 'sm' ? ' wb-btn-sm' : ''}`} disabled={busy}
+  return <button type="button" className={`wb-btn wb-btn-${variant}${size === 'sm' ? ' wb-btn-sm' : ''}`} disabled={busy || disabled}
     onClick={onClick} title={title}>{children}</button>
 }
 
@@ -170,6 +182,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const requirements = data?.requirements ?? []
   const inbox = data?.inbox ?? []
   const memory = data?.memory ?? []
+  const proposals = data?.proposals ?? []
   const audit = data?.audit ?? []
   const projectsById = useMemo(() => new Map(projects.map(project => [project.id, project])), [projects])
   const attention = useMemo(() => buildAttention(data), [data])
@@ -247,6 +260,36 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     () => xgPost('/memory/:id/reject', { by: '你' }, { params: { id: entry.id } }), '记忆已退回')
   const ignoreInbox = (item: InboxItem) => action(`inbox:${item.id}`,
     () => xgPost('/inbox/:id/ignore', undefined, { params: { id: item.id } }), '已忽略')
+  const applyProposal = (proposal: Proposal) => action(`proposal:${proposal.id}`,
+    () => xgPost('/proposals/:id/apply', { by: '你' }, { params: { id: proposal.id } }), '提案已应用')
+  const rejectProposal = (proposal: Proposal) => {
+    if (typeof window === 'undefined') return
+    const reason = window.prompt(`拒绝「${proposal.title}」的原因（可留空）`)
+    if (reason === null) return
+    void action(`proposal:${proposal.id}`,
+      () => xgPost('/proposals/:id/reject', { by: '你', reason }, { params: { id: proposal.id } }), '提案已拒绝')
+  }
+  const removeRequirement = (requirement: Requirement) => {
+    if (typeof window !== 'undefined' && !window.confirm(`删除需求「${requirement.title}」？\n它不会再出现在工作列表，历史记录保留。`)) return
+    void action(`delete:${requirement.id}`, async () => {
+      await xgPost('/requirements/:id/delete', undefined, { params: { id: requirement.id } })
+      updateViewState('work', { selection: null })
+    }, '需求已删除')
+  }
+  const removeTask = (task: Task) => {
+    if (typeof window !== 'undefined' && !window.confirm(`删除任务「${task.title}」？\n执行历史和证据会保留，但任务不再出现在列表。`)) return
+    void action(`delete:${task.id}`, async () => {
+      await xgPost('/tasks/:id/delete', undefined, { params: { id: task.id } })
+      updateViewState('work', { selection: null })
+    }, '任务已删除')
+  }
+  const removeInbox = (item: InboxItem) => {
+    if (typeof window !== 'undefined' && !window.confirm('删除这条收件？它不会再出现在收件列表，原始内容保留在审计里。')) return
+    void action(`delete:${item.id}`, async () => {
+      await xgPost('/inbox/:id/delete', undefined, { params: { id: item.id } })
+      closeInboxItem()
+    }, '收件已删除')
+  }
 
   const openSplit = (requirement: Requirement) => setSplit({ requirement, rows: [{
     title: requirement.title, type: '开发', priority: requirement.priority ?? 'P2',
@@ -314,11 +357,44 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   }
   const askAbout = (_label: string) => { openMaster() }
 
+  const proposalCard = (proposal: Proposal) => {
+    const rows = proposalTaskRows(proposal)
+    const target = requirements.find(item => item.id === proposal.targetId)
+    const pending = proposal.status === '待确认'
+    const resolution = proposal.status === '已应用'
+      ? `已创建 ${rows.length} 个任务`
+      : proposal.status === '已拒绝' ? proposal.resolution ? `拒绝原因：${proposal.resolution}` : '已拒绝'
+      : proposal.status === '已过期' ? `已过期：${proposal.resolution ?? '目标已变化'}` : null
+    return <div className={`wb-proposal ${pending ? '' : 'done'}`} key={proposal.id}>
+      <div className="wb-proposalhead"><span className="wb-type">Agent 提案</span><span className="sep">/</span>
+        <span>{timeAgo(proposal.createdAt)}</span><span className="spacer" />
+        <span className={`wb-proposalstate ${proposal.status}`}>{proposal.status}</span></div>
+      <div className="wb-proposaltitle">{proposal.title}</div>
+      {proposal.summary ? <p className="wb-proposalsummary">{proposal.summary}</p> : null}
+      {rows.length ? <div className="wb-diff">{rows.map((row, index) => <div className="wb-diffrow add" key={index}>
+        <span className="wb-diffmark">+</span><span className="wb-difftitle">{row.title || '未命名任务'}</span>
+        <small>{row.type ?? '开发'} · {row.priority ?? 'P2'}</small>
+      </div>)}
+        {pending ? <div className="wb-diffrow change"><span className="wb-diffmark">~</span><span className="wb-difftitle">需求状态</span>
+          <small>{target?.status ?? '已确认'} → 已拆分</small></div> : null}
+      </div> : null}
+      {resolution ? <p className="wb-proposalresolution">{resolution}</p> : null}
+      <div className="wb-proposalactions">
+        {pending ? <>
+          <Btn variant="primary" size="sm" busy={busy === `proposal:${proposal.id}`} onClick={() => applyProposal(proposal)}>应用</Btn>
+          <Btn variant="outline" size="sm" busy={busy === `proposal:${proposal.id}`} onClick={() => rejectProposal(proposal)}>拒绝</Btn>
+        </> : null}
+        {target ? <Btn variant="ghost" size="sm" onClick={() => openDoc('requirement', target.id)}>查看需求</Btn> : null}
+      </div>
+    </div>
+  }
+
   const attentionRow = (item: Attention) => <div className={`wb-attn ${item.kind === 'blocked' ? 'block' : 'needs'}`} key={item.key}>
     <div className="wb-attnrow">
       <div className="wb-attnmain">
         <div className="wb-type">
           {item.kind === 'requirement' ? <>需求</> : null}
+          {item.kind === 'proposal' ? <>Agent 提案</> : null}
           {item.kind === 'accept' ? <>待验收</> : null}
           {item.kind === 'blocked' ? <>阻塞</> : null}
           {item.kind === 'dispatch' ? <>待派发</> : null}
@@ -329,12 +405,24 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         </div>
         <div className="wb-title">{item.title}</div>
         <div className="wb-meta"><Dot tone={item.kind === 'blocked' ? 'block' : item.kind === 'accept' ? 'ok' : 'signal'} />{item.meta}</div>
+        {item.kind === 'proposal' && item.proposal ? (() => {
+          const rows = proposalTaskRows(item.proposal)
+          return rows.length ? <div className="wb-diff wb-attndiff">{rows.map((row, index) => <div className="wb-diffrow add" key={index}>
+            <span className="wb-diffmark">+</span><span className="wb-difftitle">{row.title || '未命名任务'}</span>
+            <small>{row.type ?? '开发'} · {row.priority ?? 'P2'}</small>
+          </div>)}</div> : null
+        })() : null}
       </div>
       <div className="wb-actions">
         {item.kind === 'requirement' && item.requirement ? <>
           <Btn variant="signal" size="sm" busy={busy === `confirm:${item.requirement.id}`} onClick={() => confirmRequirement(item.requirement!)}>确认</Btn>
           <Btn variant="ghost" size="sm" onClick={() => openSplit(item.requirement!)}>拆解</Btn>
           <Btn variant="ghost" size="sm" onClick={() => openDoc('requirement', item.requirement!.id)}>查看</Btn>
+        </> : null}
+        {item.kind === 'proposal' && item.proposal ? <>
+          <Btn variant="primary" size="sm" busy={busy === `proposal:${item.proposal.id}`} onClick={() => applyProposal(item.proposal!)}>应用</Btn>
+          <Btn variant="outline" size="sm" busy={busy === `proposal:${item.proposal.id}`} onClick={() => rejectProposal(item.proposal!)}>拒绝</Btn>
+          {item.requirement ? <Btn variant="ghost" size="sm" onClick={() => openDoc('requirement', item.requirement!.id)}>查看</Btn> : null}
         </> : null}
         {item.kind === 'accept' && item.task ? <>
           <Btn variant="primary" size="sm" busy={busy === `accept:${item.task.id}`} onClick={() => acceptTask(item.task!)}>验收</Btn>
@@ -442,6 +530,9 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const requirementDoc = (requirement: Requirement) => {
     const project = projectsById.get(requirement.projectId)
     const related = tasks.filter(task => task.requirementId === requirement.id)
+    const liveTasks = related.filter(task => task.status !== '取消')
+    const relatedProposals = proposals.filter(proposal => proposal.targetType === 'requirement' && proposal.targetId === requirement.id).slice(0, 5)
+    const pendingProposals = relatedProposals.filter(proposal => proposal.status === '待确认').length
     const events = audit.filter(entry => entry.entityId === requirement.id).slice(0, 8)
     const needs = needsHuman(requirement.status)
     return <div className="wb-doc">
@@ -464,6 +555,9 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
       </div>
       <div className="wb-metarow"><span>优先级 <b>{requirement.priority ?? '未定'}</b></span><span>来源 <b>{requirement.sourceNote || '人工录入'}</b></span>
         <span>更新 <b>{timeAgo(requirement.updatedAt)}</b></span><span>任务 <b>{related.length}</b></span></div>
+      {relatedProposals.length ? <section className="wb-docsection"><h2>Agent 提案 <span className="hint">{pendingProposals ? `${pendingProposals} 条待确认` : '已处理'}</span></h2>
+        <div className="wb-proposals">{relatedProposals.map(proposalCard)}</div>
+      </section> : null}
       {requirement.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{requirement.description}</p></section> : null}
       {related.length ? <section className="wb-docsection"><h2>任务 <span className="hint">{related.length}</span></h2>
         <div className="wb-tasklist">{related.map(task => <button className="wb-taskrow" key={task.id} onClick={() => openDoc('task', task.id)}>
@@ -485,6 +579,13 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           <div className="wb-kv"><span>创建</span><b>{timeAgo(requirement.createdAt)}</b></div>
         </div>
       </details>
+      <div className="wb-docfooter">
+        <Btn variant="ghost" size="sm" busy={busy === `delete:${requirement.id}`} disabled={liveTasks.length > 0}
+          onClick={() => removeRequirement(requirement)}
+          title={liveTasks.length ? '需求下还有未取消的任务' : '删除需求'}>删除需求</Btn>
+        <span className="wb-dangerhint">{liveTasks.length ? `还有 ${liveTasks.length} 个未取消的任务，先取消或删除任务。`
+          : '删除后不再出现在列表，历史保留。'}</span>
+      </div>
     </div>
   }
 
@@ -593,6 +694,10 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           </div> : null}
         </div>
       </details>
+      <div className="wb-docfooter">
+        <Btn variant="ghost" size="sm" busy={busy === `delete:${task.id}`} onClick={() => removeTask(task)}>删除任务</Btn>
+        <span className="wb-dangerhint">执行历史和证据会保留，任务不再出现在列表。</span>
+      </div>
     </div>
   }
 
@@ -646,6 +751,10 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
                 <Btn variant="ghost" onClick={closeInboxItem}>收起</Btn>
               </div>
             </div> : <p className="wb-empty">{item.status === '未处理' ? '点击上方按钮开始分诊。' : `已处理：${item.status}`}</p>}
+            <div className="wb-inboxfoot">
+              <Btn variant="ghost" size="sm" busy={busy === `delete:${item.id}`} onClick={() => removeInbox(item)}>删除收件</Btn>
+              <span className="wb-dangerhint">删除后不再出现在收件列表，原始内容保留在审计里。</span>
+            </div>
           </div> : null}
         </div>
       })}</div> : <p className="wb-empty">当前筛选下没有收件。</p>}

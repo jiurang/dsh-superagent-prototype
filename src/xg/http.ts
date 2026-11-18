@@ -76,6 +76,7 @@ export function registerXgHttp(ctx: Context, host: XgHttpHost): () => void {
           tasks: store.tasks.list({ limit: 500 }).items,
           inbox: store.inbox.list({ limit: 200 }).items,
           memory: store.memory.list({ limit: 500 }).items,
+          proposals: store.proposals.list({ limit: 200 }).items,
           reviews: store.reviews.listAll(200),
           audit: store.audit.list({ limit: 120 }),
         })
@@ -118,6 +119,9 @@ export function registerXgHttp(ctx: Context, host: XgHttpHost): () => void {
           description: z.string().optional(), acceptance: z.string().optional() })).min(1) }).parse(await body())
         return json(res, 200, service.splitRequirement(id(1), input.tasks))
       }
+      if (method === 'POST' && segments[0] === 'requirements' && segments[2] === 'delete') {
+        return json(res, 200, service.deleteRequirement(id(1)))
+      }
       if (method === 'GET' && segments[0] === 'inbox') {
         return json(res, 200, store.inbox.list({ projectId: q.projectId || undefined,
           status: z.enum(['未处理', '已建需求', '已忽略']).optional().parse(q.status || undefined) }))
@@ -134,6 +138,30 @@ export function registerXgHttp(ctx: Context, host: XgHttpHost): () => void {
       }
       if (method === 'POST' && segments[0] === 'inbox' && segments[2] === 'ignore') {
         return json(res, 200, service.ignoreInbox(id(1)))
+      }
+      if (method === 'POST' && segments[0] === 'inbox' && segments[2] === 'delete') {
+        return json(res, 200, service.deleteInbox(id(1)))
+      }
+      if (method === 'GET' && segments[0] === 'proposals') {
+        return json(res, 200, store.proposals.list({ projectId: q.projectId || undefined,
+          status: z.enum(['待确认', '已应用', '已拒绝', '已过期']).optional().parse(q.status || undefined),
+          targetType: q.targetType || undefined, targetId: q.targetId || undefined, limit: 200 }))
+      }
+      if (method === 'POST' && segments[0] === 'proposals' && segments.length === 1) {
+        const input = z.object({ kind: z.literal('requirement.split'), targetType: z.literal('requirement'),
+          targetId: z.string().min(1), title: z.string().min(1), summary: z.string().optional(),
+          payload: z.object({ tasks: z.array(z.object({ title: z.string().min(1), type: TaskTypeSchema, priority: PrioritySchema,
+            description: z.string().optional(), acceptance: z.string().optional() })).min(1) }),
+          createdBy: z.string().trim().min(1).optional() }).parse(await body())
+        return json(res, 200, service.createProposal(input))
+      }
+      if (method === 'POST' && segments[0] === 'proposals' && segments[2] === 'apply') {
+        const input = z.object({ by: z.string().trim().min(1).optional() }).parse(await body())
+        return json(res, 200, service.applyProposal(id(1), input.by ?? '你'))
+      }
+      if (method === 'POST' && segments[0] === 'proposals' && segments[2] === 'reject') {
+        const input = z.object({ by: z.string().trim().min(1).optional(), reason: z.string().optional() }).parse(await body())
+        return json(res, 200, service.rejectProposal(id(1), input.reason ?? '', input.by ?? '你'))
       }
       if (method === 'GET' && segments[0] === 'tasks' && segments.length === 1) {
         return json(res, 200, store.tasks.list({ projectId: q.projectId || undefined,

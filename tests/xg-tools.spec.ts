@@ -112,6 +112,20 @@ describe('main Session awareness', () => {
     expect(overview.tasks.就绪).toBe(1)
   })
 
+  it('lets the main Session draft and list a split proposal without applying it', async () => {
+    const h = harness()
+    const { requirement } = seed(h.service)
+    const main = xgTools(h, { agent })
+    const proposal = await call<{ id: string; status: string }>(main, 'xg.proposal.create', {
+      requirement_id: requirement.id, title: '拆成实现和评审', summary: '两个独立任务',
+      tasks: [{ title: '实现登录', type: '开发', priority: 'P1' }, { title: '评审登录', type: '评审', priority: 'P2' }],
+    })
+    expect(proposal.status).toBe('待确认')
+    expect(h.store.tasks.list().total).toBe(1)
+    const items = await call<{ id: string; status: string }[]>(main, 'xg.proposal.list', {})
+    expect(items).toContainEqual(expect.objectContaining({ id: proposal.id, status: '待确认' }))
+  })
+
   it('gives the main Session a workbench prompt and a Worker its task prompt', () => {
     const h = harness()
     const { task } = seed(h.service)

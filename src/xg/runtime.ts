@@ -131,6 +131,7 @@ export class XgRuntime implements XgToolsHost {
       '先调用 `xg.project.list`、`xg.task.list`、`xg.overview` 或 `xg.inbox.list` 感知当前工作台；任务 ID 必须来自工具结果，不要编造。',
       '`xg.task.get` 读取任务的需求、规格、验收、运行记录、证据和评审；`xg.memory.search` 查项目记忆；`xg.memory.list` 查待复核记忆。',
       '`xg.review.get` / `xg.review.submit` 处理评审，`xg.task.accept` 只能代人做最终验收；需要人决定时明确提问。',
+      '要拆解需求时用 `xg.proposal.create` 提交提案，不要直接建任务或改需求状态；人看过 diff 后点「应用」才落库。',
     ].join('\n')
     const attempt = this.store.attempts.byTicket(ticket.id)
     if (!attempt) return undefined

@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import type { Decision, Ticket, Trigger } from '../core/index.ts'
 import { latestReport, ticketOutcome } from '../core/index.ts'
-import type { Artifact, ArtifactType, Attempt, InboxChannel, InboxItem, MemoryEntry, MemoryType, Priority, Project, ProjectSettings, Requirement, Review,
-  ReviewDecision, Sensitivity, Spec, Task, TaskStatus, TaskType, TriageStage } from './domain.ts'
+import type { Artifact, ArtifactType, Attempt, InboxChannel, InboxItem, MemoryEntry, MemoryType, Priority, Proposal, Project, ProjectSettings,
+  Requirement, Review, ReviewDecision, Sensitivity, Spec, Task, TaskStatus, TaskType, TriageStage } from './domain.ts'
 import type { XgStore } from './store.ts'
 
 /** Host-side text guard; `XgPolicy` implements it, tests may pass a pass-through. */
@@ -59,6 +59,25 @@ export interface MemoryProposal {
   sourceRef?: string
   tags?: string[]
   artifactIds?: string[]
+}
+
+export interface ProposalTaskInput {
+  title: string
+  type: TaskType
+  priority: Priority
+  description?: string
+  acceptance?: string
+}
+
+/** An agent-authored change that must be applied by a person before it touches work data. */
+export interface ProposalInput {
+  kind: 'requirement.split'
+  targetType: 'requirement'
+  targetId: string
+  title: string
+  summary?: string
+  payload: { tasks: ProposalTaskInput[] }
+  createdBy?: string
 }
 
 /**
@@ -138,6 +157,7 @@ export class XgService {
   triageInbox(itemId: string, input: { projectId: string; title: string; description?: string; priority?: Priority }): { item: InboxItem; requirement: Requirement } {
     const item = this.store.inbox.get(itemId)
     if (!item) throw new Error(`收件不存在：${itemId}`)
+    if (item.deletedAt) throw new Error(`收件已删除：${itemId}`)
     if (item.status !== '未处理') throw new Error('该收件已处理')
     return this.store.atomic(() => {
       const description = input.description ?? item.rawContext ?? undefined
@@ -151,7 +171,19 @@ export class XgService {
   ignoreInbox(itemId: string): InboxItem {
     const item = this.store.inbox.get(itemId)
     if (!item) throw new Error(`收件不存在：${itemId}`)
+    if (item.deletedAt) throw new Error(`收件已删除：${itemId}`)
     return this.store.inbox.markTriaged(itemId, '已忽略')
+  }
+
+  /** Soft-delete an inbox item; the raw message stays in the database for audit, not in lists. */
+  deleteInbox(itemId: string, actor = '你'): InboxItem {
+    const item = this.store.inbox.get(itemId)
+    if (!item) throw new Error(`收件不存在：${itemId}`)
+    if (item.deletedAt) return item
+    const deleted = this.store.inbox.delete(itemId)
+    this.store.audit.add({ projectId: item.projectId, actor, action: '删除收件', entityType: 'inbox', entityId: itemId,
+      beforeState: item, afterState: { deletedAt: deleted.deletedAt } })
+    return deleted
   }
 
   createRequirement(input: { projectId: string; title: string; description?: string; sourceId?: string; sourceNote?: string; priority?: Priority }): Requirement {
@@ -165,6 +197,7 @@ export class XgService {
   confirmRequirement(id: string): Requirement {
     const requirement = this.store.requirements.get(id)
     if (!requirement) throw new Error(`需求不存在：${id}`)
+    if (requirement.deletedAt) throw new Error(`需求已删除：${id}`)
     if (requirement.status !== '待确认') throw new Error('只有待确认的需求可以确认')
     const updated = this.store.requirements.update(id, { status: '已确认' })
     this.store.audit.add({ projectId: requirement.projectId, actor: '人', action: '确认需求', entityType: 'requirement', entityId: id,
@@ -176,6 +209,7 @@ export class XgService {
   splitRequirement(requirementId: string, inputs: { title: string; type: TaskType; priority: Priority; description?: string; acceptance?: string }[]): { requirement: Requirement; tasks: Task[] } {
     const requirement = this.store.requirements.get(requirementId)
     if (!requirement) throw new Error(`需求不存在：${requirementId}`)
+    if (requirement.deletedAt) throw new Error(`需求已删除：${requirementId}`)
     if (requirement.status === '已关闭') throw new Error('已关闭的需求不能拆任务')
     if (!inputs.length) throw new Error('至少拆出一个任务')
     return this.store.atomic(() => {
@@ -185,6 +219,90 @@ export class XgService {
         beforeState: requirement, afterState: { requirement: updated, tasks: tasks.map(task => task.id) } })
       return { requirement: updated, tasks }
     })
+  }
+
+  /**
+   * Soft-delete a requirement. Live tasks block the exit on purpose: cancel or delete them first,
+   * otherwise their requirement link would point at a hidden record.
+   */
+  deleteRequirement(id: string, actor = '你'): Requirement {
+    const requirement = this.store.requirements.get(id)
+    if (!requirement) throw new Error(`需求不存在：${id}`)
+    if (requirement.deletedAt) return requirement
+    const live = this.store.tasks.list({ requirementId: id, limit: 1000 }).items.filter(task => task.status !== '取消')
+    if (live.length) throw new Error(`需求下还有 ${live.length} 个未取消的任务，先取消或删除任务`)
+    return this.store.atomic(() => {
+      const deleted = this.store.requirements.delete(id)
+      for (const proposal of this.store.proposals.list({ targetType: 'requirement', targetId: id, status: '待确认', limit: 100 }).items) {
+        this.expireProposal(proposal, '目标需求已删除')
+      }
+      this.store.audit.add({ projectId: requirement.projectId, actor, action: '删除需求', entityType: 'requirement', entityId: id,
+        beforeState: requirement, afterState: { deletedAt: deleted.deletedAt } })
+      return deleted
+    })
+  }
+
+  /** Create an agent proposal. It does not touch the target until `applyProposal` succeeds. */
+  createProposal(input: ProposalInput): Proposal {
+    if (input.kind !== 'requirement.split') throw new Error(`暂不支持的提案类型：${input.kind}`)
+    if (input.targetType !== 'requirement') throw new Error('需求拆解提案的目标必须是需求')
+    const requirement = this.store.requirements.get(input.targetId)
+    if (!requirement) throw new Error(`需求不存在：${input.targetId}`)
+    if (requirement.deletedAt) throw new Error(`需求已删除：${input.targetId}`)
+    if (requirement.status === '已关闭') throw new Error('已关闭的需求不能提案拆解')
+    const project = this.requireProject(requirement.projectId)
+    const tasks = this.proposalTasks(input.payload, project)
+    const title = this.clean(input.title, project, 'proposal', 'new') ?? ''
+    if (!title.trim()) throw new Error('提案标题不能为空')
+    const summary = this.clean(input.summary ?? null, project, 'proposal', 'new')
+    const proposal = this.store.proposals.create({ projectId: project.id, kind: input.kind, targetType: input.targetType,
+      targetId: requirement.id, baseRevision: requirement.updatedAt, title, summary, payload: { tasks },
+      createdBy: input.createdBy ?? '智能体' })
+    this.store.audit.add({ projectId: project.id, actor: input.createdBy ?? '智能体', action: '提交提案', entityType: 'proposal',
+      entityId: proposal.id, afterState: { kind: proposal.kind, targetId: proposal.targetId, title: proposal.title } })
+    return proposal
+  }
+
+  listProposals(filter: { projectId?: string; status?: Proposal['status']; targetType?: string; targetId?: string; limit?: number } = {}): Proposal[] {
+    return this.store.proposals.list(filter).items
+  }
+
+  /** Apply a pending proposal after checking that its target has not changed since it was drafted. */
+  applyProposal(id: string, actor = '你'): { proposal: Proposal; requirement: Requirement; tasks: Task[] } {
+    const proposal = this.store.proposals.get(id)
+    if (!proposal) throw new Error(`提案不存在：${id}`)
+    if (proposal.status !== '待确认') throw new Error(`提案已处理：${proposal.status}`)
+    if (proposal.kind !== 'requirement.split') throw new Error(`暂不支持的提案类型：${proposal.kind}`)
+    const requirement = this.store.requirements.get(proposal.targetId)
+    if (!requirement || requirement.deletedAt) {
+      this.expireProposal(proposal, '目标需求已删除')
+      throw new Error('提案已过期：目标需求已删除')
+    }
+    if (proposal.baseRevision && requirement.updatedAt !== proposal.baseRevision) {
+      this.expireProposal(proposal, '目标在提案生成后发生了变化')
+      throw new Error('提案已过期：目标在提案生成后发生了变化')
+    }
+    const project = this.requireProject(requirement.projectId)
+    const tasks = this.proposalTasks(proposal.payload, project)
+    return this.store.atomic(() => {
+      const split = this.splitRequirement(requirement.id, tasks)
+      const resolved = this.store.proposals.resolve(proposal.id, { status: '已应用', resolvedBy: actor,
+        resolution: JSON.stringify({ requirement: split.requirement.id, tasks: split.tasks.map(task => task.id) }) })
+      this.store.audit.add({ projectId: project.id, actor, action: '应用提案', entityType: 'proposal', entityId: proposal.id,
+        beforeState: proposal, afterState: { tasks: split.tasks.map(task => task.id), requirement: split.requirement.id } })
+      return { proposal: resolved, ...split }
+    })
+  }
+
+  /** Reject a proposal with an optional reason; nothing is written to the target. */
+  rejectProposal(id: string, reason = '', actor = '你'): Proposal {
+    const proposal = this.store.proposals.get(id)
+    if (!proposal) throw new Error(`提案不存在：${id}`)
+    if (proposal.status !== '待确认') throw new Error(`提案已处理：${proposal.status}`)
+    const resolved = this.store.proposals.resolve(id, { status: '已拒绝', resolvedBy: actor, resolution: reason || null })
+    this.store.audit.add({ projectId: proposal.projectId, actor, action: '拒绝提案', entityType: 'proposal', entityId: id,
+      beforeState: proposal, afterState: { status: '已拒绝', reason } })
+    return resolved
   }
 
   createTask(input: { projectId: string; requirementId: string; title: string; type: TaskType; priority: Priority; description?: string;
@@ -579,6 +697,38 @@ export class XgService {
     }
   }
 
+  /** Validate and filter a split payload before it is stored or applied. */
+  private proposalTasks(payload: unknown, project: Project): ProposalTaskInput[] {
+    const tasks = (payload as { tasks?: unknown } | null | undefined)?.tasks
+    if (!Array.isArray(tasks) || !tasks.length) throw new Error('拆解提案至少需要一个任务')
+    if (tasks.length > 20) throw new Error('拆解提案一次最多 20 个任务')
+    const types: TaskType[] = ['设计', '开发', '排障', '评审']
+    const priorities: Priority[] = ['P0', 'P1', 'P2', 'P3']
+    return tasks.map((item, index) => {
+      const row = item as Record<string, unknown>
+      const title = typeof row.title === 'string' ? row.title.trim() : ''
+      if (!title) throw new Error(`第 ${index + 1} 个任务缺少标题`)
+      if (!types.includes(row.type as TaskType)) throw new Error(`第 ${index + 1} 个任务类型无效`)
+      if (!priorities.includes(row.priority as Priority)) throw new Error(`第 ${index + 1} 个任务优先级无效`)
+      const description = typeof row.description === 'string' ? row.description : undefined
+      const acceptance = typeof row.acceptance === 'string' ? row.acceptance : undefined
+      return {
+        title: this.clean(title, project, 'proposal', 'new') ?? '',
+        type: row.type as TaskType,
+        priority: row.priority as Priority,
+        ...(description === undefined ? {} : { description: this.clean(description, project, 'proposal', 'new') ?? '' }),
+        ...(acceptance === undefined ? {} : { acceptance: this.clean(acceptance, project, 'proposal', 'new') ?? '' }),
+      }
+    })
+  }
+
+  private expireProposal(proposal: Proposal, reason: string): Proposal {
+    const expired = this.store.proposals.resolve(proposal.id, { status: '已过期', resolvedBy: '系统', resolution: reason })
+    this.store.audit.add({ projectId: proposal.projectId, actor: '系统', action: '提案过期', entityType: 'proposal', entityId: proposal.id,
+      beforeState: proposal, afterState: { status: '已过期', reason } })
+    return expired
+  }
+
   private assertTriageComplete(task: Task): void {
     const steps = this.store.triage.list(task.id)
     if (!steps.some(step => step.stage === '取证')) throw new Error('排障没有取证记录，不能报告 ready')
@@ -619,6 +769,7 @@ export class XgService {
   private requireRequirement(id: string): Requirement {
     const requirement = this.store.requirements.get(id)
     if (!requirement) throw new Error(`需求不存在：${id}`)
+    if (requirement.deletedAt) throw new Error(`需求已删除：${id}`)
     return requirement
   }
   private requireTask(id: string): Task {
