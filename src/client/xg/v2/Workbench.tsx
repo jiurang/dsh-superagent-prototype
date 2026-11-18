@@ -52,6 +52,26 @@ const taskTone = (status: TaskStatus): string => status === '阻塞' ? 'block' :
   : status === '完成' ? 'ok' : status === '就绪' || status === '取消' ? 'idle' : 'run'
 const requirementTone = (status: Requirement['status']): string => status === '待确认' ? 'signal'
   : status === '已拆分' ? 'ok' : status === '已关闭' ? 'idle' : 'run'
+const taskStatusLabel = (status: TaskStatus): string => status === '就绪' ? '待派发' : status === '评审' ? '评审中'
+  : status === '完成' ? '已完成' : status === '取消' ? '已取消' : status
+const taskStatusNote = (status: TaskStatus): string => status === '就绪' ? '等待派发，派发后 Agent 开始执行'
+  : status === '进行中' ? 'Agent 正在执行' : status === '评审' ? 'Agent 已提交评审，等待结果'
+  : status === '待验收' ? 'Agent 已交付，等你验收' : status === '阻塞' ? '需要你回答，Agent 才能继续'
+  : status === '完成' ? '已验收完成' : '已取消'
+const requirementStatusLabel = (status: Requirement['status']): string => status
+const requirementStatusNote = (status: Requirement['status']): string => status === '待确认' ? '等你确认'
+  : status === '已确认' ? '已确认，等待拆解' : status === '已拆分' ? '已拆解为任务' : '已关闭'
+const needsHuman = (status: TaskStatus | Requirement['status']): string | undefined =>
+  status === '待验收' || status === '阻塞' || status === '就绪' || status === '待确认' ? '需要你' : undefined
+const eventLabel = (type: string): string => {
+  if (type.startsWith('排障-')) return `排障：${type.slice(3)}`
+  const labels: Record<string, string> = {
+    创建: '任务创建', 派发: '开始执行', 绑定工单: '开始执行', 删除: '删除任务',
+    产物: '提交证据', 报告: 'Agent 汇报', 汇报: 'Agent 汇报', 评审: '提交评审', 验收: '验收通过',
+    规格: '更新规格', 状态变化: '状态更新', 记忆: '更新记忆',
+  }
+  return labels[type] ?? type
+}
 const priorityRank = (priority: Priority | null): number => priority === 'P0' ? 0 : priority === 'P1' ? 1 : priority === 'P2' ? 2 : 3
 const attentionRank: Record<AttentionKind, number> = { blocked: 0, accept: 1, requirement: 2, inbox: 3, memory: 4, dispatch: 5 }
 
@@ -68,13 +88,13 @@ function buildAttention(data: XgWorkbench | undefined): Attention[] {
   for (const task of data.tasks) {
     const project = projects.get(task.projectId)
     if (task.status === '阻塞') {
-      items.push({ key: `blocked:${task.id}`, kind: 'blocked', title: task.title, meta: `${task.id} · 需要你回答才能继续`,
+      items.push({ key: `blocked:${task.id}`, kind: 'blocked', title: task.title, meta: '需要你回答，Agent 才能继续',
         at: task.updatedAt, priority: task.priority, project, task })
     } else if (task.status === '待验收') {
-      items.push({ key: `accept:${task.id}`, kind: 'accept', title: task.title, meta: `${task.id} · Agent 已交付，等你验收`,
+      items.push({ key: `accept:${task.id}`, kind: 'accept', title: task.title, meta: 'Agent 已交付，等你验收',
         at: task.updatedAt, priority: task.priority, project, task })
     } else if (task.status === '就绪') {
-      items.push({ key: `dispatch:${task.id}`, kind: 'dispatch', title: task.title, meta: `${task.id} · 就绪，等待派发`,
+      items.push({ key: `dispatch:${task.id}`, kind: 'dispatch', title: task.title, meta: '待派发，等待你',
         at: task.updatedAt, priority: task.priority, project, task })
     }
   }
@@ -87,8 +107,8 @@ function buildAttention(data: XgWorkbench | undefined): Attention[] {
   for (const memory of data.memory) {
     if (memory.status !== '待复核') continue
     items.push({ key: `memory:${memory.id}`, kind: 'memory', title: memory.title,
-      meta: `${memory.type} · ${memory.sourceType}${memory.sourceRef ? ` · ${memory.sourceRef}` : ''}`,
-      at: memory.updatedAt, priority: null, project: projects.get(memory.projectId), memory })
+      meta: `${memory.type} · ${memory.sourceType}`, at: memory.updatedAt, priority: null,
+      project: projects.get(memory.projectId), memory })
   }
   return items.sort((left, right) => attentionRank[left.kind] - attentionRank[right.kind]
     || priorityRank(left.priority) - priorityRank(right.priority)
@@ -141,6 +161,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const [busy, setBusy] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
+  const [openArtifact, setOpenArtifact] = useState<string | null>(null)
   const center = useRef<HTMLElement | null>(null)
   const triageFor = useRef<string | null>(null)
 
@@ -168,6 +189,8 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const timer = setTimeout(() => setToast(null), 2800)
     return () => clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => { setOpenArtifact(null) }, [workSelection?.id])
 
   // Open the inbox form once per selected item; later edits must not be overwritten by polling.
   useEffect(() => {
@@ -295,12 +318,12 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     <div className="wb-attnrow">
       <div className="wb-attnmain">
         <div className="wb-type">
-          {item.kind === 'requirement' ? <>需求 · {item.requirement?.id}</> : null}
-          {item.kind === 'accept' ? <>待验收 · {item.task?.id}</> : null}
-          {item.kind === 'blocked' ? <>阻塞 · {item.task?.id}</> : null}
-          {item.kind === 'dispatch' ? <>待派发 · {item.task?.id}</> : null}
+          {item.kind === 'requirement' ? <>需求</> : null}
+          {item.kind === 'accept' ? <>待验收</> : null}
+          {item.kind === 'blocked' ? <>阻塞</> : null}
+          {item.kind === 'dispatch' ? <>待派发</> : null}
           {item.kind === 'inbox' ? <>收件 · {item.inboxItem?.channel}</> : null}
-          {item.kind === 'memory' ? <>记忆 · {item.memory?.id}</> : null}
+          {item.kind === 'memory' ? <>记忆 · {item.memory?.type}</> : null}
           {item.project ? <><span className="sep">/</span><ProjectTag project={item.project}/></> : null}
           <span className="sep">/</span>{timeAgo(item.at)}
         </div>
@@ -354,8 +377,8 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
       {running.length ? running.map(task => <button className="wb-run" key={task.id} onClick={() => openDoc('task', task.id)}>
         <Dot tone={taskTone(task.status)} /><ProjectTag project={projectsById.get(task.projectId)} />
         <span className="wb-runmain"><span className="wb-runtitle">{task.title}</span>
-          <span className="wb-runmeta">{task.status} · 更新 {timeAgo(task.updatedAt)}</span></span>
-        <span className="wb-runtime">{task.id}</span><span className="wb-arrow">→</span>
+          <span className="wb-runmeta">{taskStatusLabel(task.status)} · 更新 {timeAgo(task.updatedAt)}</span></span>
+        <span className="wb-arrow">→</span>
       </button>) : <p className="wb-empty">现在没有正在执行的工作。</p>}
     </section>
     <section className="wb-section">
@@ -364,18 +387,19 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         <Dot tone="ok" /><ProjectTag project={projectsById.get(task.projectId)} />
         <span className="wb-runmain"><span className="wb-runtitle">{task.title}</span>
           <span className="wb-runmeta">完成 · {timeAgo(task.completedAt ?? task.updatedAt)}</span></span>
-        <span className="wb-runtime">{task.id}</span><span className="wb-arrow">→</span>
+        <span className="wb-arrow">→</span>
       </button>) : <p className="wb-empty">还没有完成的任务。</p>}
     </section>
   </>
 
   const workRow = (kind: 'requirement' | 'task', item: Requirement | Task) => {
     const tone = kind === 'requirement' ? requirementTone((item as Requirement).status) : taskTone((item as Task).status)
+    const state = kind === 'requirement' ? requirementStatusLabel((item as Requirement).status) : taskStatusLabel((item as Task).status)
     return <button className="wb-workrow" key={`${kind}:${item.id}`} onClick={() => openDoc(kind, item.id)}>
       <span className="wb-worktype">{kind === 'requirement' ? '需求' : '任务'}</span>
       <span className="wb-workmain"><span className="wb-worktitle">{item.title}</span>
-        <span className="wb-workmeta">{item.id} · {item.priority ?? '—'} · 更新 {timeAgo(item.updatedAt)}</span></span>
-      <span className="wb-workstate"><Dot tone={tone} />{item.status}</span><span className="wb-arrow">→</span>
+        <span className="wb-workmeta">{item.priority ?? '—'} · 更新 {timeAgo(item.updatedAt)}</span></span>
+      <span className="wb-workstate"><Dot tone={tone} />{state}</span><span className="wb-arrow">→</span>
     </button>
   }
 
@@ -419,35 +443,48 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const project = projectsById.get(requirement.projectId)
     const related = tasks.filter(task => task.requirementId === requirement.id)
     const events = audit.filter(entry => entry.entityId === requirement.id).slice(0, 8)
+    const needs = needsHuman(requirement.status)
     return <div className="wb-doc">
       <button className="wb-back" onClick={backToList}>← 工作</button>
-      <div className="wb-eyebrow">需求 · {requirement.id} <span>/</span> {project?.shortCode ?? '项目'} · {project?.name ?? ''}</div>
-      <h1>{requirement.title}</h1>
-      <div className="wb-status">
-        <Dot tone={requirementTone(requirement.status)} /><b>{requirement.status}</b>
-        <span className="wb-statusnote">{requirement.priority ?? '未定优先级'} · {requirement.sourceNote || '人工录入'}</span>
-        <span className="wb-progress"><i style={{ width: related.length ? `${related.filter(task => task.status === '完成').length / related.length * 100}%` : '0%' }} /></span>
-        <span className="wb-statusactions">
-          {requirement.status === '待确认' ? <Btn variant="signal" size="sm" busy={busy === `confirm:${requirement.id}`}
-            onClick={() => confirmRequirement(requirement)}>确认需求</Btn> : null}
-          <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>拆解</Btn>
-          <Btn variant="ghost" size="sm" onClick={() => askAbout(requirement.id)}>问 Agent</Btn>
-        </span>
+      <div className="wb-eyebrow">需求 <span>/</span> {project ? displayProject(project) : '项目'} · {project?.name ?? ''}</div>
+      <div className="wb-doc-head">
+        <h1>{requirement.title}</h1>
+        <div className="wb-status">
+          <Dot tone={requirementTone(requirement.status)} /><b>{requirementStatusLabel(requirement.status)}</b>
+          <span className="wb-statusnote">{requirementStatusNote(requirement.status)}</span>
+          {needs ? <span className="wb-needs">{needs}</span> : null}
+          <span className="wb-progress"><i style={{ width: related.length ? `${related.filter(task => task.status === '完成').length / related.length * 100}%` : '0%' }} /></span>
+          <span className="wb-statusactions">
+            {requirement.status === '待确认' ? <Btn variant="signal" size="sm" busy={busy === `confirm:${requirement.id}`}
+              onClick={() => confirmRequirement(requirement)}>确认需求</Btn> : null}
+            <Btn variant="outline" size="sm" onClick={() => openSplit(requirement)}>拆解</Btn>
+            <Btn variant="ghost" size="sm" onClick={() => askAbout(requirement.id)}>问 Agent</Btn>
+          </span>
+        </div>
       </div>
-      <div className="wb-metarow"><span>更新 <b>{timeAgo(requirement.updatedAt)}</b></span><span>创建 <b>{timeAgo(requirement.createdAt)}</b></span>
-        <span>任务 <b>{related.length}</b></span></div>
-      <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{requirement.description || '暂无描述。'}</p></section>
-      <section className="wb-docsection"><h2>任务 <span className="hint">{related.length}</span></h2>
-        {related.length ? <div className="wb-tasklist">{related.map(task => <button className="wb-taskrow" key={task.id} onClick={() => openDoc('task', task.id)}>
-          <Dot tone={taskTone(task.status)} /><span className="wb-taskid">{task.id}</span><span className="wb-tasktitle">{task.title}</span>
-          <span className="wb-taskstate">{task.status}</span></button>)}</div> : <p className="wb-empty">还没有任务。点「拆解」创建第一个。</p>}
-      </section>
-      <section className="wb-docsection"><h2>时间线</h2>
-        {events.length ? <ol className="wb-timeline">{events.map(entry => <li className="wb-tlitem" key={entry.id}>
+      <div className="wb-metarow"><span>优先级 <b>{requirement.priority ?? '未定'}</b></span><span>来源 <b>{requirement.sourceNote || '人工录入'}</b></span>
+        <span>更新 <b>{timeAgo(requirement.updatedAt)}</b></span><span>任务 <b>{related.length}</b></span></div>
+      {requirement.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{requirement.description}</p></section> : null}
+      {related.length ? <section className="wb-docsection"><h2>任务 <span className="hint">{related.length}</span></h2>
+        <div className="wb-tasklist">{related.map(task => <button className="wb-taskrow" key={task.id} onClick={() => openDoc('task', task.id)}>
+          <Dot tone={taskTone(task.status)} /><span className="wb-tasktitle">{task.title}</span>
+          <span className="wb-taskstate">{taskStatusLabel(task.status)}</span></button>)}</div>
+      </section> : <p className="wb-hintline">还没有任务。点上方「拆解」创建第一个。</p>}
+      {events.length ? <section className="wb-docsection"><h2>时间线</h2>
+        <ol className="wb-timeline">{events.map(entry => <li className="wb-tlitem" key={entry.id}>
           <span className="wb-tltime">{clock(entry.createdAt)}</span><span className="wb-tldot signal" />
-          <span className="wb-tlbody"><b>{entry.action}</b><p>{entry.actor ?? '系统'} · {entry.entityType} {entry.entityId}</p></span>
-        </li>)}</ol> : <p className="wb-empty">还没有记录。</p>}
-      </section>
+          <span className="wb-tlbody"><b>{entry.action}</b><p>{entry.actor ?? '系统'}</p></span>
+        </li>)}</ol>
+      </section> : null}
+      <details className="wb-details">
+        <summary>诊断</summary>
+        <div className="wb-details-body">
+          <div className="wb-kv"><span>需求 ID</span><b>{requirement.id}</b></div>
+          <div className="wb-kv"><span>项目 ID</span><b>{requirement.projectId}</b></div>
+          <div className="wb-kv"><span>来源</span><b>{requirement.sourceNote || '人工录入'}</b></div>
+          <div className="wb-kv"><span>创建</span><b>{timeAgo(requirement.createdAt)}</b></div>
+        </div>
+      </details>
     </div>
   }
 
@@ -478,48 +515,84 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const requirement = requirements.find(item => item.id === task.requirementId)
     const fetched = detail.id === task.id ? detail : undefined
     const evidence = fetched?.data?.artifacts ?? []
-    const events = fetched?.data?.events ?? []
+    // Evidence already has its own section; keep the timeline to human milestones.
+    const events = (fetched?.data?.events ?? []).filter(event => event.eventType !== '产物' && event.eventType !== '绑定工单')
+    const latestAttempt = fetched?.data?.attempts.slice()
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
+    const needs = needsHuman(task.status)
+    const hasReport = !!(latestAttempt?.attention || latestAttempt?.lastReportAt)
+    const agentTitle = hasReport ? 'Agent 最近汇报' : 'Agent 状态'
+    const agentNote = latestAttempt?.attention
+      || (latestAttempt?.lastReportAt ? `最近汇报 ${timeAgo(latestAttempt.lastReportAt)}`
+        : fetched?.data ? task.status === '待验收' ? '交付物和证据已经整理好，等你验收。'
+          : task.status === '评审' ? '已提交评审，等待结果。'
+          : task.status === '进行中' ? '正在执行，还没有新的汇报。'
+          : task.status === '阻塞' ? '停在这里，等你回答。'
+          : task.status === '就绪' ? '还没有开始，等你派发。'
+          : '任务已经结束。'
+        : '正在读取 Agent 汇报…')
     return <div className="wb-doc">
       <button className="wb-back" onClick={backToList}>← 工作</button>
-      <div className="wb-eyebrow">任务 · {task.id} <span>/</span> {project?.shortCode ?? '项目'} · {project?.name ?? ''}</div>
-      <h1>{task.title}</h1>
-      <div className="wb-status">
-        <Dot tone={taskTone(task.status)} /><b>{task.status}</b>
-        <span className="wb-statusnote">{task.type} · {task.priority} · 更新 {timeAgo(task.updatedAt)}</span>
-        <span className="wb-progress"><i style={{ width: task.status === '完成' ? '100%' : task.status === '待验收' ? '90%'
-          : task.status === '进行中' || task.status === '评审' ? '60%' : '12%' }} /></span>
-        <span className="wb-statusactions">{taskActions(task)}</span>
+      <div className="wb-eyebrow">任务 <span>/</span> {project ? displayProject(project) : '项目'} · {project?.name ?? ''}</div>
+      <div className="wb-doc-head">
+        <h1>{task.title}</h1>
+        <div className="wb-status">
+          <Dot tone={taskTone(task.status)} /><b>{taskStatusLabel(task.status)}</b>
+          <span className="wb-statusnote">{taskStatusNote(task.status)}</span>
+          {needs ? <span className="wb-needs">{needs}</span> : null}
+          <span className="wb-progress"><i style={{ width: task.status === '完成' ? '100%' : task.status === '待验收' ? '90%'
+            : task.status === '进行中' || task.status === '评审' ? '60%' : '12%' }} /></span>
+          <span className="wb-statusactions">{taskActions(task)}</span>
+        </div>
       </div>
-      <div className="wb-metarow"><span>需求 <b>{requirement ? requirement.id : task.requirementId}</b></span>
-        <span>创建 <b>{timeAgo(task.createdAt)}</b></span><span>类型 <b>{task.type}</b></span></div>
-      <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{task.description || '暂无描述。'}</p></section>
-      <section className="wb-docsection"><h2>验收标准</h2>
-        {task.acceptance ? <div className="wb-checklist">{task.acceptance.split('\n').filter(Boolean).map((line, index) => <div className="wb-check" key={index}>
-          <span className={`wb-tick ${task.status === '完成' ? 'done' : ''}`}>{task.status === '完成' ? '✓' : ''}</span><span>{line}</span></div>)}</div>
-          : <p className="wb-empty">还没有填写验收标准。</p>}
-      </section>
+      <div className="wb-metarow"><span>需求 <b>{requirement ? requirement.title : '—'}</b></span>
+        <span>类型 <b>{task.type}</b></span><span>优先级 <b>{task.priority}</b></span><span>更新 <b>{timeAgo(task.updatedAt)}</b></span></div>
+      <div className="wb-agentline"><Dot tone={taskTone(task.status)} /><div><b>{agentTitle}</b><p>{agentNote}</p></div></div>
       {fetched?.error ? <p className="wb-error">{fetched.error.message}</p> : null}
-      {fetched?.data ? <>
-        <section className="wb-docsection"><h2>执行记录</h2>
-          {fetched.data.attempts.length ? fetched.data.attempts.map(attempt => <div className="wb-draft" key={attempt.id}>
-            <div className="wb-type">{attempt.id} <span className="sep">/</span> {attempt.status} <span className="sep">/</span> {attempt.stage ?? '—'}</div>
-            <p>{attempt.attention || (attempt.lastReportAt ? `最近汇报 ${timeAgo(attempt.lastReportAt)}` : '还没有汇报。')}</p>
-            <div className="wb-small">创建 {timeAgo(attempt.createdAt)}{attempt.endedAt ? ` · 结束 ${timeAgo(attempt.endedAt)}` : ''}</div>
-          </div>) : <p className="wb-empty">还没有执行尝试。</p>}
-        </section>
-        <section className="wb-docsection"><h2>证据</h2>
-          {evidence.length ? <div className="wb-evidence">{evidence.map(artifact => <div className="wb-ev" key={artifact.id}>
-            <b>{artifact.title || artifact.id}</b><small>{artifact.type} · {timeAgo(artifact.createdAt)}</small>
-            {artifact.content ? <p>{artifact.content}</p> : null}{artifact.uri ? <p>{artifact.uri}</p> : null}
-          </div>)}</div> : <p className="wb-empty">还没有证据。</p>}
-        </section>
-        <section className="wb-docsection"><h2>时间线</h2>
-          {events.length ? <ol className="wb-timeline">{events.map(event => <li className="wb-tlitem" key={event.id}>
-            <span className="wb-tltime">{clock(event.createdAt)}</span><span className="wb-tldot run" />
-            <span className="wb-tlbody"><b>{event.eventType}</b><p>{event.actor ?? '系统'}</p></span>
-          </li>)}</ol> : <p className="wb-empty">还没有事件。</p>}
-        </section>
-      </> : <p className="wb-loading">正在读取执行记录…</p>}
+      {task.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{task.description}</p></section> : null}
+      {task.acceptance ? <section className="wb-docsection"><h2>验收标准</h2>
+        <div className="wb-checklist">{task.acceptance.split('\n').filter(Boolean).map((line, index) => <div className="wb-check" key={index}>
+          <span className={`wb-tick ${task.status === '完成' ? 'done' : ''}`}>{task.status === '完成' ? '✓' : ''}</span><span>{line}</span></div>)}</div>
+      </section> : null}
+      {evidence.length ? <section className="wb-docsection"><h2>证据 <span className="hint">{evidence.length}</span></h2>
+        <div className="wb-evidence">{evidence.map(artifact => {
+          const open = openArtifact === artifact.id
+          return <div className={`wb-ev ${open ? 'open' : ''}`} key={artifact.id}>
+            <button type="button" className="wb-ev-toggle" onClick={() => setOpenArtifact(open ? null : artifact.id)}>
+              <span className="wb-ev-title"><b>{artifact.title || `${artifact.type}证据`}</b>
+                <small>{artifact.type} · {timeAgo(artifact.createdAt)}</small></span>
+              <span className="wb-ev-action">{open ? '收起' : '查看'}</span>
+            </button>
+            {open ? <div className="wb-ev-body">
+              {artifact.content ? <p>{artifact.content}</p> : <p className="wb-muted">没有正文。</p>}
+              {artifact.uri ? <p className="wb-ev-uri">{artifact.uri}</p> : null}
+            </div> : null}
+          </div>
+        })}</div>
+      </section> : null}
+      {events.length ? <section className="wb-docsection"><h2>时间线</h2>
+        <ol className="wb-timeline">{events.map(event => <li className="wb-tlitem" key={event.id}>
+          <span className="wb-tltime">{clock(event.createdAt)}</span><span className="wb-tldot run" />
+          <span className="wb-tlbody"><b>{eventLabel(event.eventType)}</b><p>{event.actor ?? '系统'}</p></span>
+        </li>)}</ol>
+      </section> : null}
+      <details className="wb-details">
+        <summary>诊断</summary>
+        <div className="wb-details-body">
+          <div className="wb-kv"><span>任务 ID</span><b>{task.id}</b></div>
+          <div className="wb-kv"><span>需求 ID</span><b>{task.requirementId}</b></div>
+          <div className="wb-kv"><span>项目 ID</span><b>{task.projectId}</b></div>
+          <div className="wb-kv"><span>当前尝试</span><b>{task.currentAttemptId ?? '—'}</b></div>
+          <div className="wb-kv"><span>创建</span><b>{timeAgo(task.createdAt)}</b></div>
+          {fetched?.data?.attempts.length ? <div className="wb-diag-attempts">
+            <h3>执行尝试</h3>
+            {fetched.data.attempts.map(attempt => <div className="wb-diag-row" key={attempt.id}>
+              <b>{attempt.id}</b><span>{attempt.status} · {attempt.stage ?? '—'}</span>
+              <small>{timeAgo(attempt.createdAt)}{attempt.endedAt ? ` · 结束 ${timeAgo(attempt.endedAt)}` : ''}</small>
+            </div>)}
+          </div> : null}
+        </div>
+      </details>
     </div>
   }
 
@@ -596,7 +669,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
         {pending.map(entry => <div className="wb-memorycard" key={entry.id}>
           <div className="wb-memorytitle"><ProjectTag project={projectsById.get(entry.projectId)} /> {entry.title}</div>
           <div className="wb-memorybody">{entry.content}</div>
-          <div className="wb-memorymeta">{entry.type} · {entry.sourceType}{entry.sourceRef ? ` · ${entry.sourceRef}` : ''} · 更新 {timeAgo(entry.updatedAt)}</div>
+          <div className="wb-memorymeta">{entry.type} · {entry.sourceType} · 更新 {timeAgo(entry.updatedAt)}</div>
           <div className="wb-memoryactions">
             <Btn variant="primary" size="sm" busy={busy === `memory:${entry.id}`} onClick={() => confirmMemory(entry)}>确认</Btn>
             <Btn variant="outline" size="sm" busy={busy === `memory:${entry.id}`} onClick={() => rejectMemory(entry)}>退回</Btn>
