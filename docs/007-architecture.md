@@ -408,6 +408,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/xg/v2/Workbench.tsx` | DSH workbench: today/work/inbox/knowledge/settings views and real actions |
 | `src/client/xg/v2/workbench.css` | Workbench v2 layout using DSH design tokens |
 | `src/client/xg/v2/SettingsPanel.tsx` | Workbench settings tabs: source, eval, execution, prompts, deployment, project, diagnostics |
+| `src/client/xg/v2/SidebarBadge.tsx` | DSH sidebar footer action counting workbench items that need a person; opens Today |
 | `src/client/xg/v2/settings/SourceSettings.tsx` | Source settings cards, extracted from the old Source status page |
 | `src/client/xg/v2/settings/EvalSettings.tsx` | Policy rules, admission and assessor settings, extracted from the old Eval page |
 | `src/client/xg/v2/settings/ExecutionSettings.tsx` | Executor capacity and environment settings, extracted from the old Execution page |

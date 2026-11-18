@@ -80,7 +80,7 @@ src/xg/
   domain.ts ids.ts schema.ts store.ts policy.ts email.ts service.ts tools.ts http.ts api-contract.ts runtime.ts index.ts local.ts
 src/client/xg/
   client.ts panel.tsx project-settings.tsx xg.css
-  v2/ Workbench.tsx SettingsPanel.tsx workbench.css navigation.ts
+  v2/ Workbench.tsx SettingsPanel.tsx SidebarBadge.tsx workbench.css navigation.ts
 docs/v1/ui-design/
   README.md scoring-guide.md scoring-plan.md scoring-table.md final-synthesis.md
   proposals/01-command-center … 05-timeline-flow, proposals/00-final

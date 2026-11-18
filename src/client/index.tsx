@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
-import type { SidebarPanelIconOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type { SidebarFooterActionOwnerProps, SidebarPanelIconOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
@@ -16,6 +16,7 @@ import { en, zh } from './locales.ts'
 import { PanelProvider } from './provider.tsx'
 import type { T } from './text.ts'
 import type { WorkbenchView } from './xg/v2/navigation.ts'
+import { SidebarBadge } from './xg/v2/SidebarBadge.tsx'
 import { Workbench } from './xg/v2/Workbench.tsx'
 
 type ClientContext = Context & { sessions: ISessions }
@@ -99,6 +100,9 @@ export function apply(ctx: ClientContext): void {
       label: () => t(panel.labelKey), locale: NS }, panel.Icon))
     return () => { for (const dispose of disposers) dispose() }
   })
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'xg-attention', order: 1,
+    locale: NS, inject: () => ({}) }, (props: SidebarFooterActionOwnerProps) =>
+    <SidebarBadge wide={props.wide} onOpen={() => ctx.layout.selectPanel(PANEL_VIEWS.today)} />))
   ctx.slots.inject('plugins.row.config', () => ctx.slots.register({ name: 'plugins.row.config', key: `${ENTRY}#${ENTRY}`, locale: NS },
     (props: PluginConfigViewProps & { t: T }) => <PluginConfig t={props.t} view={props.view} form={props.form} />))
 }
