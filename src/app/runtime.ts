@@ -11,7 +11,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-subprocess'
 import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { lockSync } from 'proper-lockfile'
 import { Engine, key, reasonText, type EngineForSettings, type ReceiveResult, type Ticket, type Trigger } from '../core/index.ts'
 import { allowedSender, settingsPolicy } from '../policy.ts'
@@ -46,6 +46,9 @@ import { sourceContextOf, type SourceContextDeps } from './source-context.ts'
 import type { ResourceHost } from './resources.ts'
 import { mainTools, type MainToolsHost } from './tools/main.ts'
 import { executorTools, type ExecutorToolsHost } from './tools/executor.ts'
+import { XgRuntime } from '../xg/runtime.ts'
+import { XgPolicy } from '../xg/policy.ts'
+import { localSourceKind } from '../xg/local.ts'
 
 // Source plugins interact with dsh-superagent exclusively through the `SourceHost` service interface.
 declare module '@deepseek-ai/cordis' { interface Context { orchestrator: SourceHost } }
@@ -69,6 +72,8 @@ export class Runtime extends Service implements SourceHost {
   readonly assessor: MasterAssessor
   readonly outbox: Outbox
   readonly engine: Engine
+  /** xg business layer sharing this runtime's SQLite database and Engine. */
+  readonly xg: XgRuntime
   readonly passes: Passes
   readonly ready: Promise<void>
   private readonly board = new HealthBoard()
@@ -96,7 +101,13 @@ export class Runtime extends Service implements SourceHost {
     try {
       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
       const store = opened = this.store = new Store(join(machine.stateDir, 'orchestrator.sqlite'), report)
-      const setup = this.setup = new Setup({ context: ctx, machine, lifetime: this.lifetime, restart })
+      const localRoot = (): string | undefined => {
+        const source = store.settings().sources.local
+        if (source?.enabled === false) return undefined
+        const value = source?.config.rootPath
+        return typeof value === 'string' && value.trim() ? value.trim() : undefined
+      }
+      const setup = this.setup = new Setup({ context: ctx, machine, lifetime: this.lifetime, restart, localRoot })
       const deployed = () => setup.configured()
         ? environmentOf({ deployment: setup.deployment, sources: this.sources, settings: store.settings() }) : undefined
       const feishu = () => setup.configured() && !!setup.deployment.feishu
@@ -112,6 +123,7 @@ export class Runtime extends Service implements SourceHost {
           .catch(() => { /* sync() records its failure in health. */ })
         return () => {}
       })
+      this.disposers.push(sources.register(localSourceKind))
       const links: LinkHost = { store, links: this.sourceLinks, commands, sources, lifetime: this.lifetime }
       const link = (trigger: Trigger, signal?: AbortSignal) => sourceLink(links, trigger, signal)
       const environment = (ticket: Ticket) => this.ticketEnvironment(ticket)
@@ -121,13 +133,19 @@ export class Runtime extends Service implements SourceHost {
       const sessions = this.sessions = new Sessions({ context: ctx, store, prompts, effects, health: board.claim('models'), masterId,
         lifetime: this.lifetime,
         closing: () => this.closing(), environment,
-        tools: (agent, ticket) => ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent) })
+        tools: (agent, ticket) => {
+          const base = ticket ? executorTools(this.toolHost, ticket) : mainTools(this.toolHost, agent)
+          return runtime.xg ? [...base, ...runtime.xg.tools(agent, ticket)] : base
+        },
+        xgPrompt: ticket => runtime.xg?.promptFor(ticket) })
       const policyChanged: EngineForSettings['policyChanged'] = (from, to, effects) => { this.engine.policyChanged(from, to, effects) }
       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
         sourceHost: this, setup, requestPass: () => { this.passes.request() } })
       this.executor = new DshExecutor({ context: ctx, get engine() { return runtime.engine }, store, effects, health: board.claim('worker'), machine,
         lifetime: this.lifetime, sessions, closing: () => this.closing(), paused: () => this.paused(), environment, sourceLink: link,
-        repliedTo: trigger => repliedTo({ store, sources }, trigger) })
+        repliedTo: trigger => repliedTo({ store, sources }, trigger), executionRootFor: ticket => runtime.xg?.rootPathForTicket(ticket),
+        workerModelFor: ticket => runtime.xg?.workerModelFor(ticket),
+        localWorkspace: ticket => runtime.xg?.localWorkspace(ticket) ?? false })
       this.assessor = new MasterAssessor({ get engine() { return runtime.engine }, commands, get deployment() { return setup.deployment }, effects,
         settings: () => store.settings(), paused: () => this.paused(), threadContext: trigger => sources.threadContext(trigger),
         deliver: (id, text) => sessions.prompt(masterId, id, text, 'steer'), candidateCard: candidate => candidateCard(links, candidate) })
@@ -151,6 +169,13 @@ export class Runtime extends Service implements SourceHost {
             for (const message of pullEndNotices(ended, request, setup.deployment.repository)) outbox.send(message)
           }
         } })
+      const customers = (process.env.XG_CUSTOMERS ?? '').split(',').map(name => name.trim()).filter(Boolean)
+      this.xg = new XgRuntime({ db: store.db, path: join(machine.stateDir, 'orchestrator.sqlite'), engine, tickets: store.tickets,
+        logger: ctx.logger, runtimeVersion: '0.1.0', policy: new XgPolicy({ customers }), defaultRoot: localRoot,
+        dispatchBlocked: () => !setup.configured()
+          ? `dsh-superagent 部署未完成（${setup.problem?.detail ?? '请先配置 GitHub 来源'}）；任务保持就绪，不会创建排队中的 Ticket`
+          : store.settings().paused ? 'dsh-superagent 处理已暂停；请先恢复处理' : undefined,
+        ...(process.env.XG_INBOX_DIR ? { inboxDir: process.env.XG_INBOX_DIR } : {}) })
       // Update the `evals` health entry on every pass if an evaluation failed as unavailable within the last hour.
       const evals = board.claim('evals', { state: 'ready', detail: 'No unavailable Eval in the last hour' })
       const evaluateDue = () => { engine.evaluateDue(); evals.set(evalsHealth(store)) }
@@ -201,13 +226,18 @@ export class Runtime extends Service implements SourceHost {
   private async initialize(): Promise<void> {
     // Register management HTTP routes before setup completes so operators can fix setup problems in the UI.
     this.disposers.push(registerHttp(this.ctx, this.httpHost()))
+    // The workbench pages and tools work before setup: projects, tasks, memory, and inbox are independent of GitHub/Feishu.
+    this.xg.start(this.ctx)
     if (!await this.setup.run(this.store.settings())) {
       this.runtimeHealth.set({ ...health('paused', 'setupPending'), at: now() })
       return
     }
     this.sessions.install()
     this.executor.install()
-    await this.sessions.ensure(this.masterId, this.machine.stateDir, 'dsh-superagent orchestrator', 'orchestrator')
+    // DSH workspaces require a drive-qualified path on Windows; a profile may still spell stateDir as `/tmp/...`.
+    const stateWorkspace = process.platform === 'win32' && !/^[A-Za-z]:[\\/]/.test(this.machine.stateDir)
+      ? resolve(this.machine.stateDir) : this.machine.stateDir
+    await this.sessions.ensure(this.masterId, stateWorkspace, 'dsh-superagent orchestrator', 'orchestrator')
     for (const id of this.settings.syncable()) await this.settings.sync(id).catch(() => { /* sync() records its failure in health. */ })
     // If stop() was called while awaiting setup, session creation, or policy sync, do not start background loops.
     if (this.closing()) return
@@ -238,6 +268,7 @@ export class Runtime extends Service implements SourceHost {
       // The workers' jobs and subagents stop too: their ends would start worker turns without the tool limits released below.
       await this.executor.shutdown()
       this.executor.dispose()
+      this.xg.stop()
       this.sessions.dispose()
       for (const dispose of this.disposers.reverse()) dispose()
       await this.ctx.sessionPersistence.flush()

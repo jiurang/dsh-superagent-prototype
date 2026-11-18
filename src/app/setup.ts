@@ -11,6 +11,8 @@ export interface SetupHost {
   readonly machine: Machine
   readonly lifetime: AbortSignal
   restart(): void
+  /** Root path of an enabled local Source; when set and GitHub has no repository, the runtime runs without GitHub. */
+  localRoot?(): string | undefined
 }
 
 const setupFields = (settings: Settings) =>
@@ -43,8 +45,18 @@ export class Setup {
   configured(): boolean { return this.resolved !== undefined }
   /** Resolve deployment accounts and apply the worker environment, recording `SetupError` failures in `problem`/`feishuProblem` and rethrowing unexpected errors. */
   async run(settings: Settings): Promise<boolean> {
-    try { this.resolved = await this.resolve(settings); return true }
-    catch (error) {
+    try {
+      const remote = settings.sources.github?.config.repository
+      const local = this.host.localRoot?.()
+      if (local && !remote) {
+        this.resolved = await this.resolveLocal(settings)
+        this.problem = undefined
+        this.feishuProblem = undefined
+        return true
+      }
+      this.resolved = await this.resolve(settings)
+      return true
+    } catch (error) {
       if (!(error instanceof SetupError)) throw error
       this.problem = error.problem
       return false
@@ -59,6 +71,7 @@ export class Setup {
   restart(): void { setTimeout(this.host.restart, 0) }
   /** Verify account CLIs for a modified source block before saving, ignoring setup errors belonging to other blocks. */
   async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
+    if (block === 'source:local') return
     const { machine } = this.host
     const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
       : resolveDeployment(machine, settings.sources.github?.config, this.probe())
@@ -73,6 +86,14 @@ export class Setup {
     const { context, machine, lifetime } = this.host
     return workerProbe(context.subprocess, machine.stateDir, machine.stateDir, lifetime)
   }
+  /** Resolve a local deployment: no GitHub repository or account; Worker git configuration has no credential helper. */
+  private async resolveLocal(settings: Settings): Promise<Deployment> {
+    const deployment: Deployment = { ...this.host.machine, repository: 'local', github: { cli: '', login: 'local', noreply: 'local@localhost' } }
+    await writeEnvironment(deployment, settings.executor.blockedCommands, { local: true })
+    this.restoreEnvironment = applyEnvironment(this.variables, this.host.machine.stateDir, this.path)
+    return deployment
+  }
+
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
     const probe = this.probe()

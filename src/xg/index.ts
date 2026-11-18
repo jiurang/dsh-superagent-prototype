@@ -1,0 +1,10 @@
+/** Public surface of the 雄大工作台 (Xiongda Workbench) business layer. */
+export * from './domain.ts'
+export * from './store.ts'
+export * from './service.ts'
+export * from './tools.ts'
+export * from './api-contract.ts'
+export { XgRuntime } from './runtime.ts'
+export { XgPolicy } from './policy.ts'
+export { EmailCollector, parseEml } from './email.ts'
+export { localSourceKind, LocalSourceSchema } from './local.ts'

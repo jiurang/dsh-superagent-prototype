@@ -4,7 +4,10 @@ import { expect, it } from 'vitest'
 
 const dir = join(process.cwd(), 'src/client')
 const css = readFileSync(join(dir, 'client.css'), 'utf8')
-const code = readdirSync(dir).filter(name => /\.tsx?$/.test(name)).map(name => readFileSync(join(dir, name), 'utf8')).join('\n')
+const read = (folder: string): string[] => readdirSync(folder, { withFileTypes: true })
+  .flatMap(entry => entry.isDirectory() ? read(join(folder, entry.name))
+    : /\.tsx?$/.test(entry.name) ? [readFileSync(join(folder, entry.name), 'utf8')] : [])
+const code = read(dir).join('\n')
 
 it('styles only classes a component uses', () => {
   // Template literals like `dt-btn-${variant}` match any class with that prefix.

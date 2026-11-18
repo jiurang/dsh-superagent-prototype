@@ -1,0 +1,3 @@
+# xg is mounted inside the dsh-superagent plugin (src/app/runtime.ts), not as a separate Cordis plugin.
+# This file is intentionally empty of patch rows: the bundle's own cordis.patch.yml already inserts dsh-superagent,
+# and adding a second xg entry would start a second Runtime against the same state directory.

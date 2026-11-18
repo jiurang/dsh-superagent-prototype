@@ -99,6 +99,14 @@ export class Engine {
    */
   decide(triggerId: string, outcome: Outcome): Decision { return this.repo.atomic(() => this.evals.decide(triggerId, outcome)) }
   /**
+   * Start a Ticket for work the host has already authorized, such as a task a person created in the workbench.
+   * The host is responsible for the authorization; the Source gate is not consulted. The Ticket records an explicit
+   * `followup` basis with the host as its authority, so it survives Policy changes that do not disable the host.
+   */
+  authorizeTicket(trigger: Trigger, outcome: { title: string; scope: string; reason: string; name?: string }): Decision {
+    return this.repo.atomic(() => this.evals.authorize(trigger, outcome))
+  }
+  /**
    * Attach a Trigger to a ticket that the message points at: the ticket follows the Trigger's Threads and receives it as an
    * Input with the routing note, and the Eval that holds the Trigger ends, since the ticket has it now; the other Triggers of
    * its batch wait for a fresh Eval. A note for an Input the worker already received goes out as a new Input, and so does a

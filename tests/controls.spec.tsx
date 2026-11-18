@@ -11,7 +11,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 it('imports no DSH client runtime package, only React and type declarations', () => {
   const dir = join(process.cwd(), 'src/client')
-  for (const name of readdirSync(dir)) {
+  for (const name of readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isFile()).map(entry => entry.name)) {
     const source = readFileSync(join(dir, name), 'utf8')
     for (const match of source.matchAll(/^import (type )?[^'"]*from '(@deepseek-ai\/[^']+)'/gm)) expect({ name, from: match[2], typeOnly: !!match[1] }).toMatchObject({ typeOnly: true })
     expect(source).not.toContain('dsh-client-ui-primitives\'')

@@ -374,15 +374,10 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/feishu-read.ts` | The `feishu/` reads of a Trigger's message, its root, parent and topic, and `feishuThreadContext`, which gives them to assessments with their images |
 | `src/sources/admission-context.ts` | The bounded window an assessment starts from: the first pages of a Trigger's Thread, read through its kind, and the messages around the Trigger |
 | `src/sources/feishu-image.ts` | Reads a Feishu message's image as an attachment for the assessing Session |
-| `src/client/index.tsx` | The client plugin entry: the sidebar entry, the main panel and the page in DeepSeek Harness's Plugin Manager |
-| `src/client/app.tsx` | The panel: header, search, glossary, tabs and the page of the current route |
+| `src/client/index.tsx` | The client plugin entry: four workbench main panels, their DSH sidebar entries, and the page in DeepSeek Harness's Plugin Manager |
 | `src/client/provider.tsx` | What every page reads from its host: copy, calls, navigation, notices, the state poll, and `restart`, which reads the state quickly while dsh-superagent restarts |
 | `src/client/api.ts` | Calls and polls of the management API, typed by `src/app/api.ts`, and the Decision filters of the Eval status |
-| `src/client/route.ts` | The tabs, the settings groups, the typed routes that `parseRoute` reads, and the route memory with the settings group opened last |
-| `src/client/overview.tsx` | The overview |
-| `src/client/source.tsx`, `trigger.tsx`, `eval.tsx`, `execution.tsx` | One file per stage: its status, and its settings where it has some |
-| `src/client/thread.tsx`, `ticket.tsx` | The record pages: a Thread with its timeline, and a Ticket with its authorization, Inputs and Assignments |
-| `src/client/settings.tsx` | The Settings tab: the group navigation and the group on screen |
+| `src/client/route.ts` | Settings group names and routes still used by the shared settings widgets |
 | `src/client/settings-kit.tsx` | The building blocks of settings blocks: the settings the stage groups share, `useBlockDraft`, the fields, among them a Source kind's, and the history of saves |
 | `src/client/prompts.tsx` | The Prompts settings: the page owns the view it read and its editor the draft, and the Edit, Full prompt and History tabs render from them; a built-in part's editor shows a changed default and keeps or drops the override |
 | `src/client/prompt-config.ts` | The prompt configuration by section, by the team sections, skill names, built-in parts (`part/<key>`, with `withOverride`) and part headings the prompt views give, and the line diff of the full prompt, as pure functions |
@@ -390,12 +385,33 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/draft.tsx` | Settings drafts: `draftReducer`, their states and their merge with a newer saved revision, `saveBarText`, the save bar's line, and the save bar |
 | `src/client/controls.tsx` | Local copies of DeepSeek Harness's controls, which follow its markup, keyboard behaviour and design tokens, since the bundle does not import `@deepseek-ai/dsh-client-ui-primitives`; they read no context |
 | `src/client/widgets.tsx` | The small components the pages share, which read the panel's context: sections, page heads, load states, times, links, confirmed actions, the setup check and Markdown |
-| `src/client/rows.tsx` | The rows the pages share: a Ticket, a Thread and a Decision, a Thread's chip, and the folding of runs of automated messages |
 | `src/client/markdown.ts` | The Markdown subset of reports and questions, and the bare addresses in messages, as blocks and inline parts |
 | `src/client/text.ts` | Copy by key and the wording of domain values, reasons, senders and times |
-| `src/client/marks.ts` | The marks of the states the views classify: a Ticket's or a Thread's stage, a Source's state and a Decision's outcome, each as a dot, an icon, a tone and a label |
 | `src/client/locales.ts` | All copy in both languages, and the glossary of [001 Domain model](001-domain.md) |
 | `src/client/client.css`, `css.d.ts` | The panel's stylesheet, loaded as text |
+| `src/xg/domain.ts` | The xg business vocabulary: project, inbox, requirement, task, attempt, memory, review, artifact, triage, spec, event and audit types with their closed enums |
+| `src/xg/ids.ts` | Readable IDs for projects, requirements, tasks and attempts, and project short-code normalization |
+| `src/xg/schema.ts` | The xg schema, its triggers and FTS5 table, versioned separately from the orchestrator schema by `migrateXg` |
+| `src/xg/store.ts` | `XgStore`, repositories for every xg table, transactions, task/attempt queries, memory search, backup and audit |
+| `src/xg/policy.ts` | `XgPolicy`: sensitive-content scanning, redaction, blocking by project sensitivity and recursive field guarding; `auditSummary` |
+| `src/xg/local.ts` | The `local` Source kind: root path for a local project, no GitHub/Feishu connection, and the switch for local deployment mode |
+| `src/xg/email.ts` | `parseEml` and `EmailCollector`: offline `.eml` parsing, MIME transfer decoding, HTML stripping, directory polling and inbox dedupe |
+| `src/xg/service.ts` | `XgService`: inbox triage, requirement split, task lifecycle, dispatch, reports, triage gate, review, acceptance, memory lifecycle, Ticket sync; `EngineTicketGateway` |
+| `src/xg/tools.ts` | The `xg.*` tools for Worker and main Sessions, with Ticket-scoped project resolution and outbound guarding |
+| `src/xg/http.ts` | The loopback `/xg/api` routes used by the workbench panel |
+| `src/xg/api-contract.ts` | The type-only contract between the xg panel and its HTTP routes |
+| `src/xg/runtime.ts` | `XgRuntime`: composition of the xg store, service, scheduler tick, email collector, tools and HTTP routes inside the dsh-superagent process |
+| `src/xg/index.ts` | The xg layer's public exports |
+| `src/client/xg/client.ts` | Typed `xgGet` / `xgPost` fetch helpers for `/xg/api` with the same-origin header |
+| `src/client/xg/project-settings.tsx` | The project-scope settings page: root path, sensitivity, default priority, auto-dispatch and an optional Worker model override |
+| `src/client/xg/scope.ts` | Shared project-context key plus `rememberedProject` / `rememberProject` helpers |
+| `src/client/xg/v2/Workbench.tsx` | DSH workbench: today/work/inbox/knowledge/settings views and real actions |
+| `src/client/xg/v2/workbench.css` | Workbench v2 layout using DSH design tokens |
+| `src/client/xg/v2/SettingsPanel.tsx` | Workbench settings tabs: source, eval, execution, prompts, deployment, project, diagnostics |
+| `src/client/xg/v2/settings/SourceSettings.tsx` | Source settings cards, extracted from the old Source status page |
+| `src/client/xg/v2/settings/EvalSettings.tsx` | Policy rules, admission and assessor settings, extracted from the old Eval page |
+| `src/client/xg/v2/settings/ExecutionSettings.tsx` | Executor capacity and environment settings, extracted from the old Execution page |
+| `src/client/xg/v2/navigation.ts` | Cross-panel selection state for work documents and inbox items |
 
 `src/sources/github.ts` and `src/sources/feishu.ts` are also the entries of the two Source plugins, built by `tsdown.config.ts` and exported in `package.json` as `./github-watch` and `./feishu-watch`. The bundle's `cordis.patch.yml` inserts the three plugins, with Feishu disabled.
 
@@ -437,15 +453,22 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/model-surface.spec.ts` | Everything models read: tools, prompts, skills and inputs, checked against the tool schemas, the execution environment and the glossary, within a size budget per role |
 | `tests/deployment.spec.ts`, `tests/environment.spec.ts`, `tests/index.spec.ts` | The plugin configuration and setup, the agent's process environment, the plugin entry |
 | `tests/service-script.spec.ts` | `scripts/dsh-superagent` against fake `ps`, `tmux` and `dsh` |
-| `tests/client.spec.tsx`, `tests/navigation.spec.ts`, `tests/controls.spec.tsx` | The client plugin's registration and polling, Session navigation and route memory, the local controls, and the panel's imports, which have no cycle |
-| `tests/panel-overview.spec.tsx`, `panel-source.spec.tsx`, `panel-trigger.spec.tsx`, `panel-eval.spec.tsx`, `panel-execution.spec.tsx` | Each page of the panel, against a fake management API answered by route |
-| `tests/panel-settings.spec.tsx`, `panel-prompts.spec.tsx`, `panel-deployment.spec.tsx`, `panel-panel.spec.tsx` | The settings groups, drafts and history, the prompts, the Deployment page, and the panel's search, glossary and route memory |
-| `tests/draft.spec.ts`, `tests/prompt-config.spec.ts`, `tests/markdown.spec.ts`, `tests/marks.spec.ts` | Draft states, merges and the save bar's line; the prompt configuration by section and the line diff; the Markdown subset and its links; the mark of every state the views classify |
+| `tests/client.spec.tsx`, `tests/navigation.spec.ts`, `tests/controls.spec.tsx` | The client plugin's four-panel registration and polling, Session navigation and route memory, the local controls, and the panel's imports, which have no cycle |
+| `tests/draft.spec.ts`, `tests/prompt-config.spec.ts`, `tests/markdown.spec.ts` | Draft states, merges and the save bar's line; the prompt configuration by section and the line diff; the Markdown subset and its links |
 | `tests/locales.spec.ts`, `tests/styles.spec.ts` | The copy in both languages, the stylesheet |
 | `tests/class-docs.spec.ts` | Every class in `src` has a JSDoc block before it |
 | `tests/docs.spec.ts` | Numbered documents link only to earlier ones, every local link resolves, no document has merge conflict markers, and this document's tables list every module and every test |
+| `tests/xg-service.spec.ts` | xg inbox, requirement split, dispatch, report, review, acceptance, retry/cancel, triage gate, memory confirmation and search |
+| `tests/xg-dispatch.spec.ts` | `EngineTicketGateway`: an authorized xg task becomes a real Ticket, and a worker report syncs back |
+| `tests/xg-policy.spec.ts` | Sensitive-content kinds, redaction idempotence, sensitivity blocking and nested field guarding |
+| `tests/xg-email.spec.ts` | `.eml` parsing (plain, base64, quoted-printable, folded headers, HTML) and collector dedupe |
+| `tests/xg-http.spec.ts` | `/xg/api` same-origin contract, create/confirm/split flow and error responses |
+| `tests/xg-tools.spec.ts` | `xg.*` tools through the Worker flow, Ticket scoping, sensitive output, and `XgRuntime` auto-dispatch |
+| `tests/xg-upstream.spec.ts` | A11: tracked upstream changes stay inside the documented allow-list, and the core does not import `src/xg` |
+| `tests/xg-local.spec.ts` | Local Source config, local deployment without GitHub, local worker environment, and xg project-root workspace routing |
+| `tests/xg-acceptance.spec.ts` | `SUPERAGENT-DESIGN.md` §17 A1–A10 and A12: restart/backup, Ticket report, task list, triage, memory, inbox, filtering and project isolation |
 
-`tests/fixtures/` holds what several tests share: `host.ts`, a simulated DeepSeek Harness host; `panel-server.ts` and `panel.tsx`, the fake management API and the panel around a page; `deployment.ts`, a resolved deployment; `git.ts`, the environment of every git the tests start, which names no repository; and `async.ts`.
+`tests/fixtures/` holds what several tests share: `host.ts`, a simulated DeepSeek Harness host; `deployment.ts`, a resolved deployment; `git.ts`, the environment of every git the tests start, which names no repository; and `async.ts`.
 
 ## Persistence
 

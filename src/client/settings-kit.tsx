@@ -79,27 +79,54 @@ export function ModelField({ id, value, onChange }: { id: string; value: RoleMod
     const { provider, model, effort } = { ...current, ...next }
     onChange(provider.trim() || model.trim() || effort.trim() ? { provider, model, ...effort ? { reasoningEffort: effort } : {} } : null)
   }
-  const models = catalog?.groups.find(group => group.id === current.provider.trim())?.models ?? []
+  const groups = catalog?.groups ?? []
+  const selected = groups.find(group => group.id === current.provider.trim())
+  const models = selected?.models ?? []
+  const selectedModel = models.find(model => model.id === current.model.trim())
+  const efforts = selectedModel?.reasoning?.efforts ?? []
   const fallback = catalog?.default
-  const input = (name: keyof typeof current, label: string, placeholder: string) => <Field label={label}>
-    <Input list={`${id}-${name}s`} spellCheck={false} placeholder={placeholder} value={current[name]}
-      onChange={event => set({ [name]: event.target.value })} />
-  </Field>
+  // Provider and model are a pair from the DSH catalog: choosing a provider selects its first model, so a save can never
+  // produce `{ provider: 'x', model: '' }`. A stored value missing from the catalog stays visible for older settings.
+  const chooseProvider = (provider: string) => {
+    if (!provider) { set({ provider: '', model: '', effort: '' }); return }
+    const group = groups.find(item => item.id === provider)
+    // Prefer the DSH default model when the chosen provider is the default provider; otherwise use its first model.
+    const next = group?.models.find(model => fallback?.provider === provider && model.id === fallback.model) ?? group?.models[0]
+    const effort = next && fallback?.provider === provider && fallback.model === next.id ? fallback.reasoningEffort ?? '' : next?.reasoning?.defaultEffort ?? ''
+    set({ provider, model: next?.id ?? '', effort })
+  }
+  const chooseModel = (model: string) => {
+    const entry = models.find(item => item.id === model)
+    const keep = entry?.reasoning?.efforts.some(effort => effort.id === current.effort) ?? false
+    set({ model, effort: keep ? current.effort : entry?.reasoning?.defaultEffort ?? '' })
+  }
+  const providerOptions = [...groups.map(group => ({ id: group.id, name: group.name })),
+    ...current.provider && !groups.some(group => group.id === current.provider.trim()) ? [{ id: current.provider, name: current.provider }] : []]
+  const modelOptions = [...models.map(model => ({ id: model.id, name: model.name })),
+    ...current.model && !models.some(model => model.id === current.model.trim()) ? [{ id: current.model, name: current.model }] : []]
+  const effortOptions = [...efforts.map(effort => ({ id: effort.id, name: effort.name })),
+    ...current.effort && !efforts.some(effort => effort.id === current.effort) ? [{ id: current.effort, name: current.effort }] : []]
   return <div className="dt-model">
     <Hint>{fallback ? t('defaultModel', { model: `${fallback.provider} / ${fallback.model}${fallback.reasoningEffort
       ? ` · ${fallback.reasoningEffort}` : ''}` }) : t('defaultModelUnavailable')}</Hint>
     {error && <p className="dt-error">{t('modelCatalogError', { error })}</p>}
     <div className="dt-grid3">
-      {input('provider', t('modelProvider'), t('modelInherit'))}{input('model', t('modelName'), t('modelInherit'))}{input('effort',
-        t('modelEffort'), t('modelEffortDefault'))}
+      <Field label={t('modelProvider')}><select className="dt-select" value={current.provider}
+        onChange={event => chooseProvider(event.target.value)}>
+        <option value="">{t('modelInherit')}</option>
+        {providerOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      </select></Field>
+      <Field label={t('modelName')}><select className="dt-select" value={current.model}
+        disabled={!current.provider && !current.model} onChange={event => chooseModel(event.target.value)}>
+        <option value="">{t('modelInherit')}</option>
+        {modelOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      </select></Field>
+      <Field label={t('modelEffort')}><select className="dt-select" value={current.effort}
+        disabled={!current.provider && !current.model} onChange={event => set({ effort: event.target.value })}>
+        <option value="">{t('modelEffortDefault')}</option>
+        {effortOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+      </select></Field>
     </div>
-    <datalist id={`${id}-providers`}>{catalog?.groups.map(group => <option key={group.id}
-      value={group.id}>{group.name}</option>)}</datalist>
-    <datalist id={`${id}-models`}>{models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</datalist>
-    <datalist id={`${id}-efforts`}>
-      {(models.find(model => model.id === current.model.trim())?.reasoning?.efforts ?? []).map(effort => <option key={effort.id}
-        value={effort.id}>{effort.name}</option>)}
-    </datalist>
   </div>
 }
 

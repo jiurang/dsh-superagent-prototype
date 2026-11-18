@@ -46,8 +46,9 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm exec tsc --noEmit",
     "test": "vitest run",
+    "test:xg": "vitest run tests/xg-acceptance.spec.ts tests/xg-service.spec.ts tests/xg-dispatch.spec.ts tests/xg-policy.spec.ts tests/xg-email.spec.ts tests/xg-http.spec.ts tests/xg-tools.spec.ts tests/xg-local.spec.ts tests/xg-upstream.spec.ts",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "engines": {

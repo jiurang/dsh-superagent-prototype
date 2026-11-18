@@ -1,0 +1,3580 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>雄大工作台 · 时间线工作流</title>
+<style>
+/* ============================================================
+   05 · Timeline / Flow Workspace
+   Light canvas, one strong cobalt accent, hairline rails,
+   status dots. Self-contained: system fonts + inline SVG only.
+   ============================================================ */
+:root{
+  --canvas:#EEEDE6;
+  --surface:#F7F6F0;
+  --surface-2:#F7F6F0;
+  --paper:#FFFFFF;
+  --ink:#1A1A1F;
+  --ink-2:#43434B;
+  --muted:#69685F;
+  --faint:#8B897E;
+  --line:#E4E2D8;
+  --line-strong:#D5D2C5;
+  --accent:#2547E8;
+  --accent-ink:#1A35BE;
+  --accent-soft:#EDF0FF;
+  --green:#2F7D59;
+  --green-soft:#EAF4EE;
+  --amber:#A96F15;
+  --amber-soft:#FBF2DF;
+  --red:#BE4438;
+  --red-soft:#FBEDEB;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --radius:12px;
+  --shadow-soft:0 10px 30px -22px rgba(20,20,30,.28);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:var(--sans);font-size:13.5px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+svg{display:block;flex:none}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#D5D2C7;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#C4C0B3;border:3px solid transparent;background-clip:content-box}
+[hidden]{display:none !important}
+
+/* ---------- app frame ---------- */
+.app{
+  height:100vh;max-width:1320px;margin:0 auto;background:var(--paper);
+  display:grid;grid-template-rows:58px 45px minmax(0,1fr);
+  box-shadow:0 0 0 1px var(--line);
+}
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:0 24px;background:#fff;
+  border-bottom:1px solid var(--line);position:relative;z-index:40;min-width:0;
+}
+.brand{display:inline-flex;align-items:center;gap:9px;flex:none;border:0;background:none;padding:0}
+.brand-mark{
+  width:24px;height:24px;border-radius:7px;background:var(--accent);display:grid;place-items:center;
+  color:#fff;box-shadow:0 2px 7px rgba(37,71,232,.27);flex:none;
+}
+.brand-name{font-size:14px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
+.brand-name span{color:var(--faint);font-weight:450;margin-left:2px}
+.top-grow{flex:1;min-width:8px}
+
+/* ---------- project switcher ---------- */
+.project-switch{position:relative;flex:none}
+.project-btn{
+  display:flex;align-items:center;gap:9px;height:34px;padding:0 9px 0 6px;
+  border:1px solid var(--line-strong);border-radius:9px;background:#fff;transition:.15s;
+}
+.project-btn:hover{border-color:#C9C5B9;background:#FCFCF9}
+.proj-code{
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.02em;color:var(--accent);
+  background:var(--accent-soft);padding:3px 6px;border-radius:5px;white-space:nowrap;
+  max-width:112px;overflow:hidden;text-overflow:ellipsis;
+}
+.proj-btn-name{font-size:13px;font-weight:500;max-width:158px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-btn .chev{color:var(--faint);transition:transform .15s}
+.project-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.project-menu{
+  position:absolute;left:0;top:calc(100% + 8px);width:326px;padding:6px;background:#fff;
+  border:1px solid var(--line);border-radius:13px;z-index:80;
+  box-shadow:0 18px 44px -18px rgba(20,20,30,.26),0 2px 6px rgba(20,20,30,.04);
+}
+.menu-label{
+  padding:7px 10px 5px;font-size:9px;font-weight:600;letter-spacing:.09em;
+  color:var(--faint);text-transform:uppercase;
+}
+.project-option{
+  display:grid;grid-template-columns:16px minmax(0,1fr) 16px;gap:2px 8px;width:100%;
+  padding:8px 10px;border:0;border-radius:8px;background:none;text-align:left;align-items:center;
+}
+.project-option:hover{background:#F4F3ED}
+.project-option .dot{margin-top:1px}
+.opt-main{min-width:0}
+.opt-name{display:block;font-size:12px;font-weight:500;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt-code{display:block;font-family:var(--mono);font-size:8.5px;color:var(--faint);letter-spacing:.02em}
+.opt-check{color:var(--accent);display:grid;place-items:center}
+.menu-sep{height:1px;background:var(--line);margin:5px 4px}
+.menu-foot{
+  display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:0;
+  border-radius:8px;background:none;color:var(--ink-2);font-size:11px;text-align:left;
+}
+.menu-foot:hover{background:#F4F3ED;color:var(--ink)}
+.menu-foot svg{margin-left:auto;color:var(--faint)}
+
+/* ---------- global search ---------- */
+.global-search{position:relative;width:268px;flex:none}
+.search-box{
+  display:flex;align-items:center;gap:7px;height:32px;padding:0 8px 0 9px;
+  border:1px solid var(--line-strong);border-radius:8px;background:#FAFAF7;color:var(--faint);
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.search-box:focus-within{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+.search-box input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:12.5px;color:var(--ink)}
+.search-box input::placeholder{color:var(--faint)}
+.search-box kbd{
+  font-family:var(--mono);font-size:8.5px;color:var(--faint);border:1px solid var(--line);
+  border-radius:4px;padding:1px 4px;background:#fff;white-space:nowrap;
+}
+.search-pop{
+  position:absolute;top:calc(100% + 8px);right:0;width:430px;max-height:min(520px,68vh);
+  overflow:auto;padding:7px;background:#fff;border:1px solid var(--line);border-radius:13px;
+  z-index:90;box-shadow:0 18px 44px -18px rgba(20,20,30,.26),0 2px 6px rgba(20,20,30,.04);
+}
+.search-head{padding:6px 9px 5px;font-size:8.5px;font-weight:600;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;justify-content:space-between}
+.search-result{
+  display:flex;align-items:flex-start;gap:9px;width:100%;padding:8px 9px;border:0;border-radius:8px;
+  background:none;text-align:left;
+}
+.search-result:hover{background:#F4F3ED}
+.sr-ico{
+  width:22px;height:22px;border-radius:6px;background:#F3F2EB;color:var(--muted);
+  display:grid;place-items:center;flex:none;margin-top:1px;
+}
+.sr-main{min-width:0}
+.sr-title{font-size:11.5px;font-weight:500;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-meta{font-size:9px;color:var(--faint);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+.search-empty{padding:18px 10px;font-size:10.5px;color:var(--faint);line-height:1.6}
+.search-hint{padding:5px 9px 7px;font-size:9px;color:var(--faint);display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.search-hint kbd{font-family:var(--mono);font-size:8.5px;border:1px solid var(--line);border-radius:3px;padding:0 3px;background:#FAFAF7}
+
+/* ---------- top icon buttons / bell ---------- */
+.icon-btn{
+  width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:8px;
+  background:none;color:var(--muted);position:relative;flex:none;transition:.12s;
+}
+.icon-btn:hover{background:#F3F2EC;color:var(--ink)}
+.icon-btn:focus-visible,.project-btn:focus-visible,.brand:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bell-wrap{position:relative;flex:none}
+.bell-badge{
+  position:absolute;top:2px;right:1px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;
+  background:var(--accent);color:#fff;font-size:8.5px;font-weight:600;display:grid;place-items:center;
+  border:2px solid #fff;line-height:1;
+}
+.bell-pop{
+  position:absolute;top:calc(100% + 10px);right:0;width:330px;padding:7px;background:#fff;
+  border:1px solid var(--line);border-radius:13px;z-index:90;
+  box-shadow:0 18px 44px -18px rgba(20,20,30,.26),0 2px 6px rgba(20,20,30,.04);
+}
+.bell-item{display:grid;grid-template-columns:8px 1fr auto;gap:8px;width:100%;padding:9px 9px;border:0;border-radius:8px;background:none;text-align:left;align-items:start}
+.bell-item:hover{background:#F4F3ED}
+.bell-kind{font-size:8.5px;color:var(--faint);font-weight:600}
+.bell-title{font-size:11px;font-weight:500;line-height:1.45;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bell-cta{font-size:9px;color:var(--accent);font-weight:500;margin-top:2px}
+.avatar{
+  width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;
+  display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600;
+  letter-spacing:.02em;flex:none;user-select:none;
+}
+
+/* ---------- tabs ---------- */
+.tabbar{
+  display:flex;align-items:stretch;gap:24px;padding:0 24px;background:#fff;
+  border-bottom:1px solid var(--line);position:relative;z-index:30;min-width:0;
+}
+.tab{
+  position:relative;display:inline-flex;align-items:center;gap:6px;padding:0 0 1px;
+  border:0;background:none;font-size:13.5px;color:var(--muted);font-weight:450;
+  transition:color .15s;white-space:nowrap;flex:none;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);font-weight:600}
+.tab[aria-selected="true"]::after{
+  content:"";position:absolute;left:-2px;right:-2px;bottom:-1px;height:2px;
+  border-radius:2px 2px 0 0;background:var(--accent);
+}
+.tab:focus-visible{outline:none;text-decoration:underline;text-underline-offset:4px}
+.tab-badge{
+  min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:#EFEEE7;
+  color:var(--muted);font-size:8.5px;font-weight:600;display:grid;place-items:center;
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.tab-badge.accent{background:var(--accent-soft);color:var(--accent-ink)}
+.tab-spacer{flex:1}
+.sync-note{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sync-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(47,125,89,.1);animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- scroll canvas + sticky context ---------- */
+.scroll{
+  position:relative;overflow:auto;min-width:0;
+  background:radial-gradient(1100px 520px at 88% -12%,rgba(37,71,232,.05),transparent 62%),var(--surface);
+  scrollbar-gutter:stable;
+}
+.contextbar{
+  position:sticky;top:0;z-index:25;height:68px;display:flex;align-items:center;justify-content:space-between;
+  gap:22px;padding:0 30px;background:rgba(250,250,246,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);
+}
+.ctx-main{display:flex;align-items:center;gap:11px;min-width:0}
+.ctx-badge{
+  width:36px;height:36px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;
+  font-family:var(--mono);font-size:13px;font-weight:600;flex:none;box-shadow:0 2px 7px rgba(0,0,0,.13);
+}
+.ctx-text{min-width:0}
+.ctx-title{display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap}
+.ctx-code{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--accent);
+  background:var(--accent-soft);padding:2px 5px;border-radius:4px;flex:none;
+}
+.ctx-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.ctx-state{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--green);font-weight:500;flex:none}
+.ctx-tag{font-size:9.5px;color:var(--muted);border:1px solid var(--line-strong);border-radius:999px;padding:0 5px;line-height:15px;flex:none}
+.ctx-meta{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;margin-top:1px;min-width:0}
+.ctx-meta .path{font-family:var(--mono);font-size:9.5px;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.ctx-sep{width:2px;height:2px;border-radius:50%;background:var(--faint);opacity:.7;flex:none}
+.ctx-side{display:flex;align-items:center;gap:18px;flex:none}
+.ctx-metrics{display:flex;align-items:center}
+.ctx-metric{display:flex;flex-direction:column;align-items:flex-start;padding:0 12px;border-left:1px solid var(--line);line-height:1.3}
+.ctx-metric:first-child{border-left:0;padding-left:0}
+.ctx-metric b{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.ctx-metric span{font-size:9px;color:var(--faint);letter-spacing:.02em;white-space:nowrap}
+.ctx-metric.hot b{color:var(--accent)}
+.ctx-metric.alert b{color:var(--red)}
+
+/* ---------- buttons / tags / dots ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;height:33px;padding:0 13px;
+  border:1px solid var(--line-strong);border-radius:8px;background:#fff;font-size:11.5px;font-weight:500;
+  color:var(--ink);transition:.15s;white-space:nowrap;
+}
+.btn:hover{background:#F7F6F0;border-color:#C9C5B9}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(37,71,232,.24)}
+.btn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.sm{height:28px;padding:0 10px;font-size:10.5px;border-radius:7px}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.btn.ghost:hover{background:#F3F2EC;color:var(--ink)}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tag{
+  display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:4px;
+  font-size:9px;font-weight:500;white-space:nowrap;border:1px solid transparent;flex:none;line-height:1;
+}
+.tag.priority{font-family:var(--mono);font-size:8.5px;letter-spacing:.02em}
+.tag.p0{color:var(--red);background:var(--red-soft)}
+.tag.p1{color:var(--amber);background:var(--amber-soft)}
+.tag.p2{color:var(--ink-2);background:#EEEDE6}
+.tag.p3{color:var(--faint);background:#F3F2EC}
+.tag.type{color:var(--muted);border-color:var(--line-strong);background:#fff}
+.tag.soft{background:#F1F0E9;color:var(--muted)}
+.tag.status{background:transparent;border-color:var(--line-strong);color:var(--ink-2)}
+.dot{width:6px;height:6px;border-radius:50%;flex:none;background:var(--faint);display:inline-block}
+.dot.lg{width:8px;height:8px}
+.dot.blue{background:var(--accent)}
+.dot.green{background:var(--green)}
+.dot.amber{background:var(--amber)}
+.dot.red{background:var(--red)}
+.dot.gray{background:#B9B6AB}
+.dot.ink{background:#55555E}
+.dot.hollow{background:transparent;box-shadow:inset 0 0 0 1.5px #B9B6AB}
+.dot.ring-amber{box-shadow:0 0 0 3px rgba(169,111,21,.13)}
+.dot.ring-red{box-shadow:0 0 0 3px rgba(190,68,56,.12)}
+.dot.ring-blue{box-shadow:0 0 0 3px rgba(37,71,232,.1)}
+.sts{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;color:var(--muted);white-space:nowrap}
+.sts.blue{color:var(--accent)}
+.sts.amber{color:var(--amber)}
+.sts.red{color:var(--red)}
+.sts.green{color:var(--green)}
+
+/* ---------- page shell ---------- */
+.view{padding:26px 30px 72px}
+.view-inner{max-width:1200px;margin:0 auto;animation:rise .22s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:18px}
+.eyebrow{
+  display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;font-weight:600;
+  letter-spacing:.13em;color:var(--faint);text-transform:uppercase;line-height:1.4;
+}
+.page-head h1,.flow-head h1{
+  margin:4px 0 5px;font-size:23px;line-height:1.25;font-weight:600;letter-spacing:-.02em;
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+}
+.title-count{font-size:11.5px;font-weight:500;color:var(--faint);font-variant-numeric:tabular-nums;letter-spacing:0}
+.page-sub{margin:0;font-size:12px;color:var(--muted);line-height:1.7;max-width:680px}
+.flow-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:16px}
+.flow-meta{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:10.5px;color:var(--faint);flex-wrap:wrap}
+.flow-meta .dot{width:5px;height:5px}
+.seg{display:inline-flex;padding:2px;background:#EAE9E2;border-radius:8px;gap:2px;flex:none}
+.seg button{
+  height:27px;padding:0 11px;border:0;border-radius:6px;background:none;
+  font-size:10.5px;color:var(--muted);font-weight:500;white-space:nowrap;
+}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,20,20,.08)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* ---------- commitment strip ---------- */
+.commit-strip{
+  display:flex;align-items:center;gap:20px;padding:12px 15px;background:#fff;
+  border:1px solid var(--line);border-radius:12px;margin-bottom:20px;box-shadow:var(--shadow-soft);
+}
+.commit-lead{display:flex;flex-direction:column;gap:1px;min-width:92px;border-right:1px solid var(--line);padding-right:18px;align-self:stretch;justify-content:center}
+.commit-lead .eyebrow{font-size:8.5px;letter-spacing:.1em}
+.commit-total{display:flex;align-items:baseline;gap:5px}
+.commit-total b{font-size:22px;line-height:1.15;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.commit-total span{font-size:9.5px;color:var(--faint)}
+.commit-body{flex:1;min-width:0}
+.commit-bar{display:flex;height:5px;gap:2px;border-radius:2px;overflow:hidden;background:var(--line)}
+.commit-seg{height:100%;min-width:0;background:var(--muted);transition:flex-grow .2s}
+.commit-seg[data-k="待确认"]{background:var(--amber)}
+.commit-seg[data-k="已确认"]{background:#7B8798}
+.commit-seg[data-k="已拆分"]{background:var(--green)}
+.commit-seg[data-k="已关闭"]{background:#D9D6CB}
+.commit-legend{display:flex;flex-wrap:wrap;gap:4px 13px;margin-top:7px}
+.commit-legend button{
+  display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:0;
+  font-size:10.5px;color:var(--muted);white-space:nowrap;
+}
+.commit-legend button:hover{color:var(--ink)}
+.commit-legend b{font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.commit-link{border:0;background:none;font-size:10.5px;color:var(--accent);font-weight:500;white-space:nowrap;flex:none;padding:2px 0}
+.commit-link:hover{text-decoration:underline}
+
+/* ---------- flow grid + stream ---------- */
+.flow-grid{display:grid;grid-template-columns:minmax(0,1fr) 326px;gap:26px;align-items:start}
+.flow-main{min-width:0}
+.stream-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 0}
+.stream-head h2{margin:0;font-size:13.5px;font-weight:600}
+.stream-note{font-size:10.5px;color:var(--faint)}
+.filters{display:flex;align-items:center;gap:2px;margin-left:auto;flex-wrap:wrap}
+.chip{
+  height:25px;padding:0 9px;border:1px solid transparent;border-radius:999px;background:none;
+  font-size:10.5px;color:var(--muted);font-weight:450;transition:.12s;
+}
+.chip:hover{background:#ECEBE3;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:500}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.day{margin-top:2px}
+.day-head{
+  position:sticky;top:68px;z-index:8;display:flex;align-items:center;gap:9px;
+  padding:10px 0 7px;background:var(--surface);
+}
+.day-head::after{content:"";flex:1;height:1px;background:var(--line)}
+.day-label{display:flex;align-items:baseline;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.day-label em{font-style:normal;font-weight:400;font-size:10px;color:var(--faint)}
+.day-label.today{color:var(--accent)}
+.day-count{
+  font-size:9.5px;color:var(--faint);border:1px solid var(--line);border-radius:999px;
+  padding:0 6px;line-height:16px;background:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.events{list-style:none;margin:0;padding:0 0 6px}
+.event{
+  position:relative;display:grid;grid-template-columns:46px 18px minmax(0,1fr);
+  padding:9px 12px 10px 0;margin-left:-12px;border-radius:10px;cursor:pointer;
+  transition:background .12s;
+}
+.event:hover{background:rgba(255,255,255,.82)}
+.event:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ev-time{
+  padding-top:2px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--faint);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.ev-time.live{color:var(--accent);font-weight:600}
+.ev-rail{position:relative;display:flex;justify-content:center;padding-top:4px}
+.ev-rail::before{
+  content:"";position:absolute;top:-9px;bottom:-9px;left:50%;width:1px;
+  background:var(--line);transform:translateX(-.5px);
+}
+.event:first-child .ev-rail::before{top:8px}
+.event:last-child .ev-rail::before{bottom:auto;height:8px}
+.event:only-child .ev-rail::before{display:none}
+.ev-dot{
+  width:7px;height:7px;border-radius:50%;position:relative;z-index:1;margin-top:2px;
+  background:var(--muted);box-shadow:0 0 0 3px var(--surface);
+}
+.event:hover .ev-dot{box-shadow:0 0 0 3px #fff}
+.ev-dot.blue{background:var(--accent)}
+.ev-dot.green{background:var(--green)}
+.ev-dot.amber{background:var(--amber)}
+.ev-dot.red{background:var(--red)}
+.ev-dot.gray{background:#B9B6AB}
+.ev-dot.ink{background:#55555E}
+.ev-dot.hollow{background:transparent;box-shadow:inset 0 0 0 1.5px #B9B6AB,0 0 0 3px var(--surface)}
+.ev-dot.ring{box-shadow:0 0 0 3px rgba(190,68,56,.14),0 0 0 3px var(--surface)}
+.ev-main{min-width:0;padding-left:4px}
+.ev-kicker{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--faint);line-height:1.5;flex-wrap:wrap}
+.ev-kind{font-weight:600;color:var(--muted);letter-spacing:.03em}
+.ev-actor{color:var(--muted)}
+.ev-proj{
+  font-family:var(--mono);font-size:8.5px;color:var(--faint);border:1px solid var(--line);
+  border-radius:3px;padding:0 3px;line-height:14px;
+}
+.ev-title{margin:0;font-size:13px;line-height:1.5;font-weight:500;color:var(--ink);overflow-wrap:anywhere}
+.ev-title .quiet{font-weight:400;color:var(--muted)}
+.ev-text{margin:2px 0 0;font-size:11.5px;line-height:1.65;color:var(--muted);max-width:640px;overflow-wrap:anywhere}
+.ev-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.ev-chip{
+  font-size:9px;color:var(--faint);background:#EFEEE7;border-radius:3px;padding:1px 5px;
+  font-variant-numeric:tabular-nums;line-height:14px;
+}
+.ev-chip.warn{color:var(--amber);background:var(--amber-soft)}
+.ev-chip.red{color:var(--red);background:var(--red-soft)}
+.ev-open{
+  position:absolute;right:12px;bottom:11px;font-size:10px;color:var(--accent);font-weight:500;
+  opacity:0;transform:translateX(-2px);transition:.15s;display:flex;align-items:center;gap:2px;
+}
+.event:hover .ev-open{opacity:1;transform:none}
+.stream-empty{padding:34px 0;font-size:10.5px;color:var(--faint);line-height:1.7}
+.stream-foot{padding:18px 0 8px;font-size:9px;color:var(--faint);display:flex;align-items:center;gap:6px}
+
+/* ---------- now panel ---------- */
+.now-panel{
+  position:sticky;top:88px;background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:15px 15px 13px;box-shadow:0 12px 34px -24px rgba(20,20,30,.3);
+  max-height:calc(100vh - 168px);overflow:auto;scrollbar-width:thin;
+}
+.now-panel::before{content:"";position:absolute;left:15px;right:15px;top:-1px;height:2px;background:linear-gradient(90deg,var(--accent),rgba(37,71,232,.15))}
+.now-head{display:flex;align-items:center;gap:8px}
+.now-mark{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);flex:none}
+.now-head h2{margin:0;font-size:13.5px;font-weight:600;display:flex;align-items:baseline;gap:6px}
+.now-head h2 em{font-family:var(--mono);font-style:normal;font-size:8.5px;letter-spacing:.12em;color:var(--faint)}
+.now-total{margin-left:auto;font-size:9.5px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.now-sub{margin:4px 0 0;font-size:10.5px;color:var(--faint);line-height:1.55}
+.now-items{list-style:none;margin:8px 0 0;padding:0}
+.now-item{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.now-item:first-child{border-top:0}
+.now-item .dot{margin-top:6px}
+.now-kind{font-size:9.5px;font-weight:600;letter-spacing:.03em;color:var(--faint);line-height:1.4}
+.now-kind.warn{color:var(--amber)}
+.now-kind.red{color:var(--red)}
+.now-kind.blue{color:var(--accent)}
+.now-title{
+  margin:1px 0 0;font-size:12px;line-height:1.45;font-weight:500;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;
+}
+.now-meta{margin-top:3px;font-size:9.5px;color:var(--faint);display:flex;gap:4px 7px;flex-wrap:wrap;line-height:1.45}
+.now-meta .p{font-family:var(--mono)}
+.now-cta{
+  height:24px;padding:0 8px;border:1px solid #D9DDF3;border-radius:6px;background:var(--accent-soft);
+  color:var(--accent-ink);font-size:9.5px;font-weight:600;white-space:nowrap;margin-top:1px;transition:.12s;
+}
+.now-cta:hover{background:#E1E6FF;border-color:#C4CCF0}
+.now-empty{padding:12px 0 4px;font-size:10.5px;color:var(--faint);border-top:1px solid var(--line);line-height:1.6}
+.now-rule{border:0;border-top:1px solid var(--line);margin:11px 0 0}
+.now-section{margin-top:12px}
+.now-section-head{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:600;letter-spacing:.05em;color:var(--faint);margin-bottom:2px}
+.now-section-head .n{font-weight:500;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:0 4px;line-height:14px}
+.running-item{display:flex;gap:7px;width:100%;padding:6px 0;border:0;background:none;text-align:left;align-items:flex-start}
+.running-item:hover .run-title{color:var(--accent)}
+.pulse{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:5px;position:relative;flex:none}
+.pulse::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:1px solid rgba(37,71,232,.32);animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.8);opacity:.8}70%{transform:scale(1.7);opacity:0}100%{opacity:0}}
+.run-main{min-width:0}
+.run-title{font-size:11px;font-weight:500;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .12s}
+.run-meta{font-size:9px;color:var(--faint);margin-top:1px;display:flex;gap:5px;flex-wrap:wrap}
+.next-item{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:10px;color:var(--muted);min-width:0}
+.next-item .dot{width:5px;height:5px}
+.next-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.next-link{border:0;background:none;color:var(--accent);font-size:9.5px;font-weight:500;padding:0;white-space:nowrap}
+.next-link:hover{text-decoration:underline}
+.now-inbox{
+  margin-top:11px;width:100%;display:flex;align-items:center;gap:6px;padding:8px 9px;
+  border:1px solid var(--line);border-radius:8px;background:#FAFAF7;font-size:9.5px;color:var(--muted);
+  text-align:left;transition:.12s;
+}
+.now-inbox:hover{border-color:var(--line-strong);color:var(--ink)}
+.now-inbox b{font-weight:600;color:var(--ink-2)}
+.now-inbox svg{margin-left:auto;color:var(--faint)}
+
+/* ---------- toolbars / pills ---------- */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:13px;flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+.toolbar-note{font-size:9.5px;color:var(--faint);display:flex;align-items:center;gap:5px}
+.pill-row{display:flex;gap:3px;flex-wrap:wrap;align-items:center}
+.status-filter{
+  height:25px;padding:0 9px;border-radius:999px;border:1px solid transparent;background:none;
+  font-size:10.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+}
+.status-filter:hover{background:#ECEBE3;color:var(--ink)}
+.status-filter[aria-pressed="true"]{background:#fff;border-color:var(--line-strong);color:var(--ink);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.status-filter .n{color:var(--faint);font-size:9px;font-variant-numeric:tabular-nums}
+
+/* ---------- requirements ---------- */
+.req-project{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow-soft)}
+.req-project-head{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--line);background:#FCFCF9;flex-wrap:wrap}
+.req-project-head .pcode{
+  font-family:var(--mono);font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+  padding:2px 5px;border-radius:4px;letter-spacing:.03em;
+}
+.req-project-head h2{margin:0;font-size:12.5px;font-weight:600;line-height:1.4}
+.req-project-head .meta{margin-left:auto;font-size:9.5px;color:var(--faint);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:7px}
+.req-group{padding-bottom:5px}
+.req-group + .req-group{border-top:1px solid var(--line)}
+.req-group-head{display:flex;align-items:center;gap:6px;padding:9px 15px 6px;flex-wrap:wrap}
+.req-group-head h3{margin:0;font-size:10.5px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
+.req-group-head .n{font-size:9px;color:var(--faint);font-variant-numeric:tabular-nums}
+.req-group-head .hint{font-size:9px;color:var(--faint)}
+.req-empty{padding:1px 15px 8px 27px;font-size:10px;color:var(--faint)}
+.req-row{
+  display:grid;grid-template-columns:17px minmax(0,1fr) auto;gap:6px;padding:9px 15px 10px 13px;
+  border-top:1px solid #F3F2EC;cursor:pointer;transition:background .12s;position:relative;
+}
+.req-row:hover{background:#FBFBF7}
+.req-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.req-chev{color:var(--faint);padding-top:4px;transition:transform .15s;display:grid;place-items:start center}
+.req-row.open .req-chev{transform:rotate(90deg);color:var(--ink-2)}
+.req-main{min-width:0}
+.req-title-line{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
+.req-seq{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:-.02em;flex:none}
+.req-title{
+  font-size:12.5px;font-weight:500;line-height:1.45;overflow-wrap:anywhere;border:0;background:none;
+  padding:0;text-align:left;cursor:pointer;font-family:inherit;color:inherit;
+}
+.req-title:hover{color:var(--accent)}
+.req-title:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.req-time{font-size:9px;color:var(--faint);margin-left:1px;white-space:nowrap}
+.req-meta{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:9.5px;color:var(--faint);margin-top:2px;line-height:1.5}
+.req-meta .source{color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.req-side{display:flex;align-items:center;gap:7px;padding-top:1px}
+.mini-pips{display:flex;align-items:center;gap:2px}
+.mini-pips .dot{width:5px;height:5px}
+.req-side-note{font-size:9.5px;color:var(--faint);white-space:nowrap}
+.row-act{
+  height:23px;padding:0 8px;border:1px solid var(--line-strong);background:#fff;border-radius:6px;
+  font-size:9.5px;color:var(--ink-2);font-weight:500;white-space:nowrap;transition:.12s;
+}
+.row-act:hover{border-color:var(--accent);color:var(--accent)}
+.row-act.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.row-act.primary:hover{background:var(--accent-ink);color:#fff}
+.req-expand{padding:0 15px 14px 36px;background:#FBFAF5;border-top:1px solid #EFEEE8;animation:unfold .18s ease-out}
+@keyframes unfold{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+.req-expand-top{display:flex;gap:14px;padding:11px 0 12px;align-items:flex-start;flex-wrap:wrap}
+.req-note{
+  flex:1;min-width:240px;margin:0;padding:9px 11px;border-left:2px solid #D9D6CB;
+  background:#F3F2EC;border-radius:0 6px 6px 0;font-size:10.5px;color:var(--muted);line-height:1.7;
+}
+.req-note b{display:block;font-size:8px;font-weight:600;color:var(--ink-2);margin-bottom:2px;letter-spacing:.04em}
+.req-note .req-desc{margin:4px 0 0;color:var(--ink-2);font-size:9.5px;line-height:1.6}
+.req-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding-top:1px}
+.req-tasks{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.req-tasks-head{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);background:#FCFCF9}
+.req-tasks-head h4{margin:0;font-size:10px;font-weight:600;color:var(--ink-2)}
+.req-tasks-head .n{font-size:9px;color:var(--faint);font-variant-numeric:tabular-nums}
+.req-tasks-head .hint{margin-left:auto;font-size:9px;color:var(--faint)}
+.mini-task{
+  display:grid;grid-template-columns:7px minmax(0,1fr) auto auto auto auto;gap:7px;align-items:center;
+  padding:8px 10px;border-top:1px solid #F3F2EC;cursor:pointer;transition:background .12s;
+}
+.mini-task:first-of-type{border-top:0}
+.mini-task:hover{background:#FAFAF6}
+.mini-task:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mini-title{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-attempt{font-size:9.5px;color:var(--faint);white-space:nowrap;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.mini-open{font-size:9.5px;color:var(--accent);opacity:0;transition:.12s;white-space:nowrap}
+.mini-task:hover .mini-open{opacity:1}
+.req-task-empty{padding:13px 11px;font-size:10.5px;color:var(--faint);line-height:1.65}
+.req-flash{animation:flash 1.8s ease}
+.event.ev-flash{animation:flash 1.8s ease}
+@keyframes flash{0%,100%{background-color:transparent}18%{background-color:#EDF0FF}}
+
+/* ---------- tasks table ---------- */
+.task-table{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-soft)}
+.task-thead,.task-row{
+  display:grid;grid-template-columns:minmax(230px,1.55fr) 62px 52px minmax(180px,1.05fr) 66px 14px;
+  gap:12px;align-items:center;
+}
+.task-thead{padding:8px 15px;background:#FBFBF7;border-bottom:1px solid var(--line);font-size:9px;color:var(--faint);letter-spacing:.07em;font-weight:600}
+.task-row{width:100%;padding:11px 15px;border:0;border-top:1px solid #F2F1EB;background:none;text-align:left;transition:background .12s}
+.task-thead + .task-row{border-top:0}
+.task-row:hover{background:#FAFAF6}
+.task-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.task-row-main{display:flex;align-items:flex-start;gap:7px;min-width:0}
+.task-row-main > .dot{margin-top:5px}
+.task-row-title{font-size:12.5px;font-weight:500;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-row-sub{font-size:9.5px;color:var(--faint);margin-top:2px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.task-attempt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.att-line{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-sub{font-size:9.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-updated{font-size:9.5px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.task-arrow{color:var(--faint);display:grid;place-items:center}
+.task-row:hover .task-arrow{color:var(--accent)}
+.empty{padding:42px 20px;text-align:center;color:var(--faint);font-size:10.5px;line-height:1.7}
+
+/* ---------- inbox ---------- */
+.inbox-layout{display:grid;grid-template-columns:minmax(0,1fr) 292px;gap:22px;align-items:start}
+.inbox-list{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-soft)}
+.inbox-item{padding:13px 15px;border-top:1px solid var(--line)}
+.inbox-item:first-child{border-top:0}
+.inbox-head{display:flex;align-items:center;gap:7px;font-size:9.5px;color:var(--faint);margin-bottom:6px;flex-wrap:wrap}
+.channel{font-size:9px;background:#F1F0E9;border-radius:3px;padding:1px 5px;color:var(--ink-2);font-weight:500}
+.inbox-contact{font-size:11.5px;color:var(--ink-2);font-weight:500}
+.inbox-time{margin-left:auto;font-variant-numeric:tabular-nums}
+.inbox-text{font-size:12px;line-height:1.7;color:var(--ink-2);margin:0 0 8px;overflow-wrap:anywhere}
+.inbox-foot{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.inbox-proj{font-size:9.5px;color:var(--faint);display:inline-flex;align-items:center;gap:4px}
+.inbox-actions{margin-left:auto;display:flex;gap:5px}
+.aside-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 15px;position:sticky;top:88px;box-shadow:var(--shadow-soft)}
+.aside-card h3{margin:0 0 3px;font-size:11.5px;font-weight:600}
+.aside-card > p{margin:0;font-size:10.5px;color:var(--faint);line-height:1.7}
+.principle-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.principle-list li{display:flex;gap:7px;font-size:10.5px;color:var(--muted);line-height:1.7;align-items:flex-start}
+.principle-list b{color:var(--ink-2);font-weight:500}
+.step-n{
+  font-family:var(--mono);font-size:8px;color:var(--accent);background:var(--accent-soft);
+  border-radius:3px;width:15px;height:15px;display:grid;place-items:center;flex:none;margin-top:1px;
+}
+.inbox-flash{animation:flash 1.8s ease}
+
+/* ---------- memory ---------- */
+.mem-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.memory{
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+  display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow-soft);
+}
+.memory.flash{animation:flash 1.8s ease}
+.memory-head{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.memory-title{font-size:12.5px;font-weight:600;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.memory-text{
+  font-size:10.5px;color:var(--muted);line-height:1.7;margin:0;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.memory-meta{font-size:9.5px;color:var(--faint);display:flex;gap:5px 8px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.tags{display:flex;gap:3px;flex-wrap:wrap}
+.tag-mini{font-size:9px;background:#F3F2EC;color:var(--faint);padding:1px 5px;border-radius:3px;line-height:14px}
+.memory-foot{margin-top:auto;padding-top:8px;border-top:1px solid #F3F2EC;display:flex;align-items:center;gap:5px}
+.memory-foot .spacer{flex:1}
+
+/* ---------- reviews ---------- */
+.review-section{margin-bottom:22px}
+.section-head{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.section-head h2{margin:0;font-size:12px;font-weight:600}
+.section-head .n{font-size:9px;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:0 5px;line-height:15px;background:#fff;font-variant-numeric:tabular-nums}
+.section-head .hint{margin-left:auto;font-size:9.5px;color:var(--faint)}
+.pending-review{
+  display:flex;align-items:center;gap:9px;padding:12px 14px;background:#fff;border:1px solid var(--line);
+  border-radius:11px;width:100%;text-align:left;transition:.12s;box-shadow:var(--shadow-soft);
+}
+.pending-review:hover{border-color:#CCC8BC;background:#FCFCF9}
+.pr-main{flex:1;min-width:0}
+.pr-title{font-size:12px;font-weight:500;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-meta{font-size:9.5px;color:var(--faint);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+.review-list{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-soft)}
+.review-item{padding:11px 14px;border-top:1px solid #F2F1EB}
+.review-item:first-child{border-top:0}
+.review-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.review-task{font-size:11.5px;font-weight:500}
+.review-task:hover{text-decoration:underline;text-underline-offset:2px}
+.review-comment{
+  margin:5px 0 0;font-size:10.5px;color:var(--muted);line-height:1.7;padding-left:9px;
+  border-left:2px solid var(--line);overflow-wrap:anywhere;
+}
+.review-meta{font-size:9.5px;color:var(--faint);margin-top:5px;display:flex;gap:7px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+
+/* ---------- projects ---------- */
+.project-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.project-card{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 17px;
+  display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden;box-shadow:var(--shadow-soft);
+}
+.project-card.current::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.project-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.project-code{font-family:var(--mono);font-size:9px;color:var(--accent);background:var(--accent-soft);padding:2px 5px;border-radius:4px;letter-spacing:.03em}
+.project-card h2{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
+.project-desc{margin:0;font-size:10.5px;color:var(--muted);line-height:1.7}
+.project-root{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin:0;overflow-wrap:anywhere}
+.project-stats{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin:1px 0}
+.project-stat{padding:0 13px;border-left:1px solid var(--line)}
+.project-stat:first-child{padding-left:0;border-left:0}
+.project-stat b{display:block;font-size:15px;font-variant-numeric:tabular-nums;font-weight:600;line-height:1.3}
+.project-stat span{font-size:9px;color:var(--faint);white-space:nowrap}
+.project-foot{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.project-foot .last{font-size:9px;color:var(--faint)}
+.project-foot .btn{margin-left:auto}
+.hierarchy-strip{
+  display:flex;align-items:center;gap:9px;margin-top:20px;padding:12px 15px;
+  border:1px dashed var(--line-strong);border-radius:11px;font-size:10.5px;color:var(--muted);flex-wrap:wrap;
+}
+.hierarchy-strip b{color:var(--ink-2);font-weight:500}
+.hier-step{display:inline-flex;align-items:center;gap:5px}
+.hier-arrow{color:var(--faint);display:grid;place-items:center}
+
+/* ---------- overlays: sheets / composer / modal ---------- */
+.overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end}
+.overlay-mask{position:absolute;inset:0;background:rgba(23,23,28,.3);backdrop-filter:blur(2px);animation:fade .18s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet{
+  position:relative;z-index:1;height:100%;width:min(470px,100%);background:var(--surface);
+  box-shadow:-24px 0 70px -30px rgba(15,15,20,.38);display:flex;flex-direction:column;
+  animation:slideIn .24s cubic-bezier(.2,.8,.25,1);min-height:0;
+}
+.detail-sheet{width:min(760px,100%)}
+@keyframes slideIn{from{transform:translateX(30px);opacity:.55}to{transform:none;opacity:1}}
+.sheet-head{
+  display:flex;align-items:flex-start;gap:14px;padding:19px 22px 15px;border-bottom:1px solid var(--line);
+  background:#FCFCF9;flex:none;
+}
+.sheet-head h2{margin:3px 0 0;font-size:19px;font-weight:600;letter-spacing:-.015em;line-height:1.3;overflow-wrap:anywhere}
+.sheet-head .icon-btn{margin-left:auto;margin-top:-2px}
+.sheet-body{flex:1;overflow:auto;padding:17px 22px 30px;min-height:0}
+.sheet-foot{
+  display:flex;align-items:center;gap:8px;padding:12px 22px;border-top:1px solid var(--line);
+  background:#FCFCF9;flex:none;
+}
+.sheet-foot .hint{font-size:9.5px;color:var(--faint);line-height:1.5;margin-right:auto;max-width:240px}
+.sheet-foot .btn{flex:none}
+.detail-head{padding:17px 24px 14px;border-bottom:1px solid var(--line);background:#FCFCF9;flex:none}
+.detail-crumb{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--faint);flex-wrap:wrap;line-height:1.5}
+.detail-crumb .pcode{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:1px 4px;border-radius:3px}
+.detail-title-row{display:flex;align-items:flex-start;gap:12px;margin-top:5px}
+.detail-title-row h2{margin:0;font-size:20px;line-height:1.4;font-weight:600;letter-spacing:-.015em;overflow-wrap:anywhere}
+.detail-title-row .icon-btn{margin-left:auto;flex:none}
+.detail-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;font-size:10px;color:var(--faint);line-height:1.5}
+.detail-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.detail-actions .spacer{flex:1}
+.text-danger{border:0;background:none;color:var(--red);font-size:10.5px;padding:4px 0;font-weight:500;white-space:nowrap}
+.text-danger:hover{text-decoration:underline}
+.detail-body{padding:16px 24px 36px;overflow:auto;flex:1;min-height:0}
+.detail-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:10px;margin-bottom:14px}
+.info-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+.info-label{
+  display:flex;align-items:center;gap:4px;font-size:9px;font-weight:600;letter-spacing:.05em;
+  color:var(--faint);margin-bottom:4px;text-transform:uppercase;
+}
+.info-card p{margin:0;font-size:10.5px;line-height:1.7;color:var(--ink-2);overflow-wrap:anywhere}
+.info-card .sub{margin-top:4px;font-size:9.5px;color:var(--faint);display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.info-card.full{grid-column:1/-1}
+.action-card{border:1px solid;border-radius:11px;padding:12px 13px;margin-bottom:16px}
+.action-card.review{background:#FCF7EC;border-color:#EBDBBC}
+.action-card.accept{background:var(--accent-soft);border-color:#D7DCF7}
+.action-card.blocked{background:var(--red-soft);border-color:#F0D5D1}
+.action-card.ready{background:#F5F4EE;border-color:var(--line)}
+.action-card h3{margin:0;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:6px;line-height:1.5}
+.action-card p.hint{margin:3px 0 0;font-size:10.5px;color:var(--muted);line-height:1.65}
+.action-card .btn{margin-top:9px}
+.review-input{
+  width:100%;margin-top:8px;border:1px solid #E4D4B4;border-radius:8px;background:#fff;
+  padding:7px 9px;font-size:11.5px;line-height:1.6;resize:vertical;min-height:52px;outline:none;
+}
+.review-input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(169,111,21,.1)}
+.review-actions{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap}
+.review-actions .spacer{flex:1}
+.btn.review-pass{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.review-pass:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.timeline-title{display:flex;align-items:center;gap:7px;margin:5px 0 1px}
+.timeline-title h3{margin:0;font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
+.timeline-title .n{font-size:9.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.timeline-title .line{flex:1;height:1px;background:var(--line)}
+.task-timeline{position:relative}
+.tl-day{display:flex;align-items:center;gap:8px;margin:12px 0 1px;padding-top:3px;font-size:9.5px;color:var(--faint);font-weight:500}
+.tl-day::after{content:"";flex:1;height:1px;background:var(--line)}
+.tl-day.today{color:var(--accent)}
+.tl-entry{display:grid;grid-template-columns:37px 16px minmax(0,1fr);padding:6px 0;position:relative}
+.tl-time{padding-top:1px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tl-rail{position:relative;display:flex;justify-content:center;padding-top:3px}
+.tl-rail::before{content:"";position:absolute;top:-6px;bottom:-6px;left:50%;width:1px;background:var(--line);transform:translateX(-.5px)}
+.tl-entry:first-child .tl-rail::before{top:3px}
+.tl-entry:last-child .tl-rail::before{bottom:auto;height:3px}
+.tl-dot{width:6px;height:6px;border-radius:50%;background:var(--faint);position:relative;z-index:1;box-shadow:0 0 0 3px var(--surface)}
+.tl-dot.blue{background:var(--accent)}
+.tl-dot.green{background:var(--green)}
+.tl-dot.amber{background:var(--amber)}
+.tl-dot.red{background:var(--red)}
+.tl-dot.ink{background:#55555E}
+.tl-main{min-width:0;padding:0 0 2px 4px}
+.tl-kicker{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--faint);flex-wrap:wrap;line-height:1.5}
+.tl-kicker b{font-weight:600;color:var(--muted)}
+.tl-text{margin:1px 0 0;font-size:11.5px;line-height:1.65;color:var(--ink-2);overflow-wrap:anywhere}
+.tl-text.quote{color:var(--muted);background:#F4F3ED;border-left:2px solid #DDD9CD;padding:5px 8px;border-radius:0 5px 5px 0;margin-top:4px}
+.attempt-chip{font-family:var(--mono);font-size:7.5px;color:var(--faint);border:1px solid var(--line);border-radius:3px;padding:0 3px;line-height:12px;background:#fff}
+.evidence{
+  display:flex;align-items:flex-start;gap:7px;margin-top:5px;padding:6px 8px;
+  background:#fff;border:1px solid var(--line);border-radius:7px;
+}
+.evidence svg{color:var(--faint);margin-top:1px}
+.evidence .ev-title2{font-size:10.5px;font-weight:500;color:var(--ink-2);line-height:1.45}
+.evidence .ev-sub{font-size:9.5px;color:var(--faint);margin-top:1px;overflow-wrap:anywhere;line-height:1.5}
+.danger-zone{
+  margin-top:20px;padding-top:13px;border-top:1px solid var(--line);display:flex;align-items:center;
+  gap:9px;flex-wrap:wrap;
+}
+.danger-zone span{font-size:9.5px;color:var(--faint);line-height:1.5;max-width:360px}
+.danger-zone .text-danger{margin-left:auto}
+
+/* modal */
+.modal-layer{justify-content:center;align-items:center;z-index:1200}
+.modal{
+  position:relative;z-index:1;width:min(400px,calc(100% - 40px));background:#fff;border-radius:15px;
+  padding:21px;box-shadow:0 30px 80px -20px rgba(0,0,0,.38);animation:pop .18s ease;
+}
+@keyframes pop{from{transform:scale(.975);opacity:0}to{transform:none;opacity:1}}
+.modal-icon{width:31px;height:31px;border-radius:50%;background:var(--red-soft);color:var(--red);display:grid;place-items:center;margin-bottom:10px}
+.modal h2{margin:0 0 5px;font-size:15px;font-weight:600}
+.modal p{margin:0;font-size:11.5px;line-height:1.75;color:var(--muted);overflow-wrap:anywhere}
+.modal .modal-task{color:var(--ink);font-weight:500}
+.modal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:17px}
+
+/* form fields */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:15px}
+.field > label,.field-label{
+  font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.03em;display:flex;align-items:center;gap:5px;
+}
+.field .req{font-weight:400;color:var(--faint)}
+.field .note{font-size:9px;color:var(--faint);line-height:1.55;font-weight:400}
+.input,.textarea,.select{
+  width:100%;border:1px solid var(--line-strong);border-radius:8px;background:#fff;
+  padding:8px 10px;font-size:12px;color:var(--ink);outline:none;transition:.15s;
+}
+.input{height:34px}
+.textarea{resize:vertical;min-height:80px;line-height:1.65}
+.input:focus,.textarea:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input::placeholder,.textarea::placeholder{color:#B2AFA5}
+.select{height:33px;padding-right:26px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.field-row .field{margin-bottom:0}
+.seg-control{display:inline-flex;gap:2px;padding:2px;background:#EFEEE7;border-radius:8px;flex-wrap:wrap}
+.seg-control button{
+  min-width:34px;height:24px;padding:0 8px;border:0;border-radius:6px;background:none;
+  font-size:10.5px;color:var(--muted);font-weight:500;
+}
+.seg-control button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:600}
+.seg-control.prio button[aria-pressed="true"][data-value="P0"]{color:var(--red)}
+.seg-control.prio button[aria-pressed="true"][data-value="P1"]{color:var(--amber)}
+.seg-control button:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.check{display:flex;align-items:flex-start;gap:7px;font-size:10.5px;color:var(--muted);line-height:1.55;cursor:pointer;margin:2px 0 0}
+.check input{width:13px;height:13px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.source-card{background:#F4F3ED;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:14px}
+.src-label{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--faint);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.source-card p{margin:3px 0 0;font-size:10.5px;line-height:1.7;color:var(--ink-2);overflow-wrap:anywhere}
+.ctx-req{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#FCFCF9;margin-bottom:14px}
+.ctx-req .seq{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:2px}
+.ctx-req h3{margin:0;font-size:11.5px;font-weight:500;line-height:1.55}
+.ctx-req p{margin:2px 0 0;font-size:9.5px;color:var(--faint)}
+.split-preview{margin-top:-3px;padding:10px 11px;background:#F6F5EF;border:1px solid var(--line);border-radius:9px;margin-bottom:14px}
+.split-preview-head{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--faint);letter-spacing:.05em;margin-bottom:6px}
+.split-preview-count{margin-left:auto;font-weight:500;color:var(--accent);font-variant-numeric:tabular-nums}
+.split-item{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10.5px;min-width:0}
+.split-item .n{font-family:var(--mono);font-size:9px;color:var(--faint);width:14px;flex:none}
+.split-item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.split-empty{font-size:10px;color:var(--faint);line-height:1.65;padding:1px 0}
+.warn-line{display:flex;gap:5px;font-size:9.5px;color:var(--amber);line-height:1.55;margin-top:6px}
+.form-error{font-size:10.5px;color:var(--red);min-height:0;margin:2px 0 0;line-height:1.5}
+
+/* toasts */
+.toast-root{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2000;
+  display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:center;gap:7px;background:#232329;color:#fff;padding:8px 13px;
+  border-radius:9px;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);font-size:10.5px;
+  animation:toastIn .2s ease;max-width:min(560px,calc(100vw - 40px));line-height:1.5;
+}
+.toast svg{color:#8FE0B4}
+.toast.out{animation:toastOut .2s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(4px)}}
+
+/* responsive */
+@media (max-width:1180px){
+  .proj-btn-name{max-width:110px}
+  .global-search{width:218px}
+  .ctx-meta .path{max-width:150px}
+  .flow-grid{grid-template-columns:minmax(0,1fr) 300px;gap:20px}
+  .view{padding-inline:24px}
+  .contextbar{padding-inline:24px}
+  .now-panel{top:84px}
+}
+@media (max-width:1024px){
+  .tabbar{gap:17px;overflow-x:auto;scrollbar-width:none}
+  .tabbar::-webkit-scrollbar{display:none}
+  .brand-name span{display:none}
+  .project-btn{padding-right:7px}
+  .ctx-metrics{display:none}
+  .flow-grid{grid-template-columns:1fr;gap:20px}
+  .now-panel{position:static;max-height:none;order:-1}
+  .now-items{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .now-item:nth-child(2){border-top:0}
+  .now-panel::before{left:14px;right:14px}
+  .project-grid,.mem-grid{grid-template-columns:1fr}
+  .inbox-layout{grid-template-columns:1fr}
+  .aside-card{position:static}
+  .task-thead,.task-row{grid-template-columns:minmax(220px,1.6fr) minmax(160px,1fr) 60px 14px}
+  .task-table .col-type,.task-table .col-prio{display:none}
+}
+@media (max-width:820px){
+  .app{grid-template-rows:56px 44px minmax(0,1fr)}
+  .topbar{padding:0 14px;gap:10px}
+  .project-switch{max-width:220px}
+  .proj-btn-name{max-width:80px}
+  .global-search{width:180px}
+  .avatar{display:none}
+  .tabbar{padding:0 14px;gap:16px}
+  .sync-note{display:none}
+  .contextbar{padding:0 16px;height:62px;gap:12px}
+  .ctx-meta{display:none}
+  .ctx-side{gap:8px}
+  .ctx-side .btn span.long{display:none}
+  .view{padding:20px 16px 56px}
+  .day-head{top:62px}
+  .page-head{align-items:flex-start;flex-direction:column;gap:10px}
+  .flow-head{align-items:flex-start;flex-direction:column;gap:10px}
+  .commit-strip{gap:12px;padding:11px 12px}
+  .commit-lead{padding-right:12px;min-width:76px}
+  .commit-link{display:none}
+  .now-items{display:block}
+  .now-item:nth-child(2){border-top:1px solid var(--line)}
+  .sheet-body,.detail-body{padding-inline:16px}
+  .sheet-head,.detail-head,.sheet-foot{padding-inline:16px}
+  .detail-grid{grid-template-columns:1fr}
+  .field-row{grid-template-columns:1fr}
+  .req-expand{padding-left:22px}
+  .req-side-note,.mini-pips{display:none}
+  .task-thead,.task-row{grid-template-columns:minmax(0,1fr) 70px 14px;gap:8px}
+  .task-table .col-attempt{display:none}
+  .req-title-line{flex-wrap:wrap}
+  .req-time{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <button class="brand" data-action="home" aria-label="雄大工作台 · 概览">
+      <span class="brand-mark">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+          <circle cx="4" cy="3" r="1.6" fill="currentColor"/>
+          <circle cx="9" cy="6.5" r="1.6" fill="currentColor" opacity=".65"/>
+          <circle cx="4" cy="10" r="1.6" fill="currentColor"/>
+          <path d="M4 4.6v3.8M5.4 6.5h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">雄大<span>工作台</span></span>
+    </button>
+    <div class="project-switch" id="projectSwitch"></div>
+    <div class="top-grow"></div>
+    <div class="global-search">
+      <div class="search-box">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.4"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="globalSearch" type="search" placeholder="搜索需求、任务、记忆" autocomplete="off" aria-label="全局搜索">
+        <kbd>Ctrl K</kbd>
+      </div>
+      <div class="search-pop" id="searchPop" hidden></div>
+    </div>
+    <div class="bell-wrap" id="bellWrap"></div>
+    <div class="avatar" title="你 · 当前操作者" aria-label="当前用户 你">Y</div>
+  </header>
+  <nav class="tabbar" id="tabbar" aria-label="主导航"></nav>
+  <div class="scroll" id="scroll">
+    <div class="contextbar" id="contextbar"></div>
+    <main class="view" id="view"></main>
+  </div>
+</div>
+<div id="overlayRoot"></div>
+<div class="toast-root" id="toastRoot" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+
+/* ============================================================
+   0 · tiny helpers
+   ============================================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[ch]));
+const pad2 = n => String(n).padStart(2, '0');
+const byId = (list, id) => list.find(item => item.id === id);
+
+const ICONS = {
+  chevDown: '<path d="M3.5 6 8 10.5 12.5 6" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>',
+  chevRight: '<path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>',
+  plus: '<path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  close: '<path d="m4.2 4.2 7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  arrow: '<path d="M3 8h9.4M9 4.6 12.4 8 9 11.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>',
+  bell: '<path d="M8 2.4a4 4 0 0 0-4 4v2.2L2.9 11h10.2L12 8.6V6.4a4 4 0 0 0-4-4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 12.6a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  check: '<path d="m3.4 8.4 2.9 2.9 6.3-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  folder: '<path d="M2.2 5.2A1.2 1.2 0 0 1 3.4 4h2.4l1.3 1.5h5.5A1.2 1.2 0 0 1 13.8 6.7v4.6a1.2 1.2 0 0 1-1.2 1.2H3.4a1.2 1.2 0 0 1-1.2-1.2V5.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>',
+  doc: '<path d="M4.2 2.2h4.4l3.2 3.2v8.4H4.2V2.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8.6 2.4v3h3" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 8.4h4.4M5.8 10.8h3.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>',
+  clock: '<circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.25"/><path d="M8 4.9V8l2 1.4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>',
+  alert: '<path d="M8 2.6 14 13H2L8 2.6Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M8 6.4v3.1M8 11.4v.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  lock: '<rect x="3.2" y="7" width="9.6" height="6.6" rx="1.4" stroke="currentColor" stroke-width="1.2"/><path d="M5.4 7V5.4a2.6 2.6 0 0 1 5.2 0V7" stroke="currentColor" stroke-width="1.2"/>',
+  play: '<path d="M5.4 3.8 12 8l-6.6 4.2V3.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  refresh: '<path d="M12.8 7.2A4.8 4.8 0 1 1 11 3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M13.2 2.7v3.1H10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  trash: '<path d="M3.4 4.8h9.2M6.4 2.8h3.2M5 4.8l.5 8.2h5l.5-8.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>',
+  inbox: '<path d="M2.4 8.6 4 3.4h8l1.6 5.2v3.6A1.2 1.2 0 0 1 12.4 13H3.6a1.2 1.2 0 0 1-1.2-1.2V8.6Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.6 8.8h3.1l1 1.8h2.6l1-1.8h3.1" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>',
+  memory: '<path d="M8 2.3 13.5 5v6L8 13.7 2.5 11V5L8 2.3Z" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/><path d="M2.7 5.1 8 7.8l5.3-2.7M8 7.8v5.6" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>',
+  review: '<path d="M2.6 3.2h10.8v7.4H7l-3.2 2.4v-2.4H2.6V3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="m5.4 6.7 1.7 1.7 3.3-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  task: '<rect x="2.7" y="2.7" width="10.6" height="10.6" rx="2.2" stroke="currentColor" stroke-width="1.2"/><path d="m5.4 8 1.7 1.7 3.5-3.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  flow: '<path d="M3 4h10M3 8h6.5M3 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  split: '<path d="M3 3.2v2.4a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="m10.6 10.2 2.4 2.2 2-2.3M3 12.8v-1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  spark: '<path d="M8 2.4 9.4 6.3 13.3 7.7 9.4 9.1 8 13 6.6 9.1 2.7 7.7 6.6 6.3 8 2.4Z" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/>',
+  search: '<circle cx="7" cy="7" r="4.2" stroke="currentColor" stroke-width="1.25"/><path d="m10.2 10.2 2.8 2.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+};
+const icon = (name, size = 13) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+
+/* ============================================================
+   1 · mock data (DEMO + NEW_CENTER_APP)
+   ============================================================ */
+const DEMO = {
+  id: 'p-demo',
+  shortCode: 'DEMO',
+  name: '演示项目 · 账单系统',
+  status: '活跃',
+  sensitivity: '内部',
+  rootPath: 'D:\\work\\bill-demo',
+  description: '客户账单的导出、对账与历史补录。',
+};
+const NEW_CENTER_APP = {
+  id: 'p-center',
+  shortCode: 'NEW_CENTER_APP',
+  name: '中心应用',
+  status: '活跃',
+  sensitivity: '机密',
+  rootPath: 'G:\\work\\new-center-app',
+  description: '统一登录、消息中心与工作台首屏。',
+};
+const PROJECTS = [DEMO, NEW_CENTER_APP];
+
+const REQUIREMENT_STATUSES = ['待确认', '已确认', '已拆分', '已关闭'];
+const TASK_STATUSES = ['就绪', '进行中', '评审', '待验收', '完成', '阻塞', '取消'];
+const PRIORITIES = ['P0', 'P1', 'P2', 'P3'];
+const TASK_TYPES = ['设计', '开发', '排障', '评审'];
+
+const REQ_DOT = { 待确认: 'amber', 已确认: 'ink', 已拆分: 'green', 已关闭: 'gray' };
+const REQ_HINT = { 待确认: '等你确认后再拆任务', 已确认: '可以拆任务了', 已拆分: '任务在需求下推进', 已关闭: '已归档，不再推进' };
+const TASK_DOT = { 就绪: 'gray', 进行中: 'blue', 评审: 'amber', 待验收: 'amber', 完成: 'green', 阻塞: 'red', 取消: 'gray' };
+const ATTEMPT_DOT = { 运行中: 'blue', 就绪: 'gray', 阻塞: 'red', 失败: 'red', 结束: 'green', 取消: 'gray' };
+const MEMORY_DOT = { 草稿: 'gray', 待复核: 'amber', 已确认: 'green', 已废弃: 'gray' };
+const PRIORITY_CLASS = { P0: 'p0', P1: 'p1', P2: 'p2', P3: 'p3' };
+
+const requirements = [
+  {
+    id: 'r-export-month', projectId: DEMO.id, seqNo: 12, title: '账单导出需要支持按月拆分',
+    description: '财务在月末需要按自然月导出账单，当前只能整单导出；季度对账时还需要一次导出多个月。',
+    status: '待确认', priority: 'P1',
+    sourceNote: '企微 · 财务王姐：客户对账时既要按月看，也要能一次导出季度。',
+    createdAt: '2026-11-17 09:20', updatedAt: '2026-11-17 09:20',
+  },
+  {
+    id: 'r-export-reason', projectId: DEMO.id, seqNo: 11, title: '导出失败时给出可读原因',
+    description: '导出失败时界面只有错误码，客服无法向客户解释原因；需要可读原因与下一步动作。',
+    status: '已确认', priority: 'P1',
+    sourceNote: '电话 · 客服小林：客户看不懂 EXPORT_FAILED。',
+    createdAt: '2026-11-16 10:05', updatedAt: '2026-11-17 10:32',
+  },
+  {
+    id: 'r-aggregate', projectId: DEMO.id, seqNo: 9, title: '对账单列表按客户聚合',
+    description: '客户成功希望在对账单列表直接看到按客户的合计金额，并能展开客户明细。',
+    status: '已拆分', priority: 'P2',
+    sourceNote: '邮件 · 客户成功周会：客户希望按客户看合计，不只看明细。',
+    createdAt: '2026-11-15 16:20', updatedAt: '2026-11-17 14:21',
+  },
+  {
+    id: 'r-backfill', projectId: DEMO.id, seqNo: 7, title: '历史账单补录脚本',
+    description: '历史账单存在旧主体名称，需要一次性补录；脚本必须先跑只读校验。',
+    status: '已拆分', priority: 'P3',
+    sourceNote: '人工记录 · 运维交接：历史账单主体名称需要批量修正。',
+    createdAt: '2026-11-13 15:10', updatedAt: '2026-11-17 11:18',
+  },
+  {
+    id: 'r-footer', projectId: DEMO.id, seqNo: 4, title: '账单页脚注释统一',
+    description: '统一账单页脚的主体名称与联系方式，历史账单同样适用。',
+    status: '已关闭', priority: 'P3',
+    sourceNote: '人工记录 · 客服反馈：页脚主体名称不统一。',
+    createdAt: '2026-11-10 09:40', updatedAt: '2026-11-12 16:30',
+  },
+  {
+    id: 'r-login-prompt', projectId: NEW_CENTER_APP.id, seqNo: 31, title: '统一登录态失效提示',
+    description: '登录态失效时页面只提示「请求失败」，值班需要翻日志判断；统一为可读提示并引导重新登录。',
+    status: '待确认', priority: 'P0',
+    sourceNote: '电话 · 运维老周：今天又出了两次，值班只能翻日志。',
+    createdAt: '2026-11-17 13:03', updatedAt: '2026-11-17 13:03',
+  },
+  {
+    id: 'r-first-screen', projectId: NEW_CENTER_APP.id, seqNo: 28, title: '工作台首屏加载超过 3 秒',
+    description: '工作台首屏加载稳定超过 3 秒，影响每日早会前的巡检。',
+    status: '已确认', priority: 'P1',
+    sourceNote: '巡检 · 性能周报：首屏 3.4s，接口等待占 2.1s。',
+    createdAt: '2026-11-16 08:50', updatedAt: '2026-11-16 09:15',
+  },
+  {
+    id: 'r-batch-read', projectId: NEW_CENTER_APP.id, seqNo: 26, title: '消息中心支持批量已读',
+    description: '运营每天处理上千条消息，需要多选并批量标记已读，且重复请求不能产生额外变化。',
+    status: '已拆分', priority: 'P1',
+    sourceNote: '企微 · 产品林珊：运营每天要处理上千条消息，先做批量已读。',
+    createdAt: '2026-11-15 11:20', updatedAt: '2026-11-17 14:27',
+  },
+  {
+    id: 'r-mobile-pass', projectId: NEW_CENTER_APP.id, seqNo: 22, title: '移动端样式走查',
+    description: '对移动端主要页面做一次样式走查，记录问题并归档。',
+    status: '已关闭', priority: 'P3',
+    sourceNote: '评审 · 移动端走查会议：记录已归档。',
+    createdAt: '2026-11-08 14:00', updatedAt: '2026-11-12 10:20',
+  },
+];
+
+const tasks = [
+  {
+    id: 't-agg-design', projectId: DEMO.id, requirementId: 'r-aggregate', seqNo: 21,
+    title: '设计账单聚合视图', type: '设计', status: '完成', priority: 'P2',
+    acceptance: '交互稿覆盖按客户聚合、筛选与空态；标注与开发对齐。',
+    currentAttemptId: 'a-t1', autoDispatch: false, attention: null,
+    acceptedBy: '你', acceptedAt: '2026-11-16 16:00',
+    createdAt: '2026-11-15 16:45', updatedAt: '2026-11-16 16:00',
+    spec: '聚合视图默认按客户展开，保留账期筛选；空态需要解释「尚无对账数据」。',
+  },
+  {
+    id: 't-agg-api', projectId: DEMO.id, requirementId: 'r-aggregate', seqNo: 22,
+    title: '实现按客户聚合查询', type: '开发', status: '评审', priority: 'P1',
+    acceptance: '聚合合计与明细合计一致；10 万行样本响应 < 800ms。',
+    currentAttemptId: 'a-7f3', autoDispatch: false, attention: null,
+    acceptedBy: null, acceptedAt: null,
+    createdAt: '2026-11-15 16:45', updatedAt: '2026-11-17 13:58',
+    spec: '聚合口径：客户 + 账期；保留明细金额的原始精度，展示层再四舍五入。',
+  },
+  {
+    id: 't-agg-tests', projectId: DEMO.id, requirementId: 'r-aggregate', seqNo: 23,
+    title: '补充聚合边界用例', type: '开发', status: '进行中', priority: 'P2',
+    acceptance: '覆盖空客户、跨月与并发；用例可在本地重复运行。',
+    currentAttemptId: 'a-2c9', autoDispatch: false, attention: null,
+    acceptedBy: null, acceptedAt: null,
+    createdAt: '2026-11-15 16:45', updatedAt: '2026-11-17 14:21',
+    spec: null,
+  },
+  {
+    id: 't-backfill-script', projectId: DEMO.id, requirementId: 'r-backfill', seqNo: 24,
+    title: '编写补录脚本', type: '开发', status: '阻塞', priority: 'P2',
+    acceptance: '脚本支持 dry-run；只读校验通过前不得写入任何记录。',
+    currentAttemptId: 'a-4e1', autoDispatch: false, attention: '等待数据库只读授权',
+    acceptedBy: null, acceptedAt: null,
+    createdAt: '2026-11-13 15:10', updatedAt: '2026-11-17 11:18',
+    spec: '先只读、后写入；每一步打印影响行数，失败自动停止。',
+  },
+  {
+    id: 't-backfill-drill', projectId: DEMO.id, requirementId: 'r-backfill', seqNo: 25,
+    title: '预发环境演练补录', type: '开发', status: '就绪', priority: 'P3',
+    acceptance: '预发全量演练一次，记录耗时与回滚方式。',
+    currentAttemptId: null, autoDispatch: false, attention: null,
+    acceptedBy: null, acceptedAt: null,
+    createdAt: '2026-11-13 15:10', updatedAt: '2026-11-13 15:10',
+    spec: null,
+  },
+  {
+    id: 't-msg-bulk', projectId: NEW_CENTER_APP.id, requirementId: 'r-batch-read', seqNo: 26,
+    title: '消息中心批量操作栏', type: '开发', status: '待验收', priority: 'P1',
+    acceptance: '勾选 100 条后批量已读，操作栏保持可见；未读数即时刷新。',
+    currentAttemptId: 'a-8a2', autoDispatch: true, attention: null,
+    acceptedBy: null, acceptedAt: null,
+    createdAt: '2026-11-15 13:40', updatedAt: '2026-11-17 14:27',
+    spec: null,
+  },
+  {
+    id: 't-msg-idem', projectId: NEW_CENTER_APP.id, requirementId: 'r-batch-read', seqNo: 27,
+    title: '批量已读接口幂等处理', type: '开发', status: '完成', priority: 'P2',
+    acceptance: '重复提交不产生额外未读变化；并发 200 无错误。',
+    currentAttemptId: 'a-8a1', autoDispatch: false, attention: null,
+    acceptedBy: '你', acceptedAt: '2026-11-16 18:32',
+    createdAt: '2026-11-15 13:40', updatedAt: '2026-11-16 18:32',
+    spec: '幂等键使用 (accountId, messageId)，保留 24 小时请求指纹。',
+  },
+];
+
+const attempts = [
+  {
+    id: 'a-t1', taskId: 't-agg-design', stage: '已交付', status: '结束',
+    workerSessionId: 'sess-71b0', createdAt: '2026-11-16 09:10', endedAt: '2026-11-16 12:10',
+    lastReportAt: '2026-11-16 11:50',
+    reports: [{ at: '2026-11-16 11:50', text: '交互稿已完成，覆盖聚合视图、筛选与空态，等待评审。' }],
+  },
+  {
+    id: 'a-7f1', taskId: 't-agg-api', stage: '构建', status: '失败',
+    workerSessionId: 'sess-3c1a', createdAt: '2026-11-16 09:30', endedAt: '2026-11-16 09:59',
+    lastReportAt: '2026-11-16 09:58',
+    reports: [{ at: '2026-11-16 09:58', tone: 'red', text: '构建失败：聚合 SQL 在 10 万行样本上超过 8s。已回退到明细聚合方案。' }],
+  },
+  {
+    id: 'a-7f2', taskId: 't-agg-api', stage: '已实现', status: '结束',
+    workerSessionId: 'sess-6e2d', createdAt: '2026-11-16 13:10', endedAt: '2026-11-16 15:52',
+    lastReportAt: '2026-11-16 15:42',
+    reports: [{ at: '2026-11-16 15:42', text: '按客户聚合已实现。10 万行基准 640ms，已提交变更说明与基准数据，等待评审。' }],
+  },
+  {
+    id: 'a-7f3', taskId: 't-agg-api', stage: '评审', status: '运行中',
+    workerSessionId: 'sess-9ac41', createdAt: '2026-11-17 13:54', endedAt: null,
+    lastReportAt: '2026-11-17 13:58',
+    reports: [{ at: '2026-11-17 13:58', text: '评审会话已就绪，请确认聚合口径与基准数据。' }],
+  },
+  {
+    id: 'a-2c9', taskId: 't-agg-tests', stage: '执行中', status: '运行中',
+    workerSessionId: 'sess-4d18', createdAt: '2026-11-16 13:10', endedAt: null,
+    lastReportAt: '2026-11-17 14:21',
+    reports: [
+      { at: '2026-11-16 17:40', text: '初版用例完成，正在补并发边界。' },
+      { at: '2026-11-17 14:21', text: '已覆盖空客户与跨月边界，补充 2 个并发用例，正在跑全量。' },
+    ],
+  },
+  {
+    id: 'a-4e1', taskId: 't-backfill-script', stage: '等待授权', status: '阻塞',
+    workerSessionId: 'sess-2b7f', createdAt: '2026-11-17 10:08', endedAt: null,
+    lastReportAt: '2026-11-17 11:18',
+    reports: [
+      { at: '2026-11-17 10:32', text: '脚本主体完成，dry-run 被数据库权限拦截，需要只读授权。' },
+      { at: '2026-11-17 11:18', tone: 'red', text: '等待数据库只读授权；未进行任何写入。' },
+    ],
+  },
+  {
+    id: 'a-8a1', taskId: 't-msg-idem', stage: '已评审', status: '结束',
+    workerSessionId: 'sess-88c1', createdAt: '2026-11-16 09:30', endedAt: '2026-11-16 16:05',
+    lastReportAt: '2026-11-16 16:00',
+    reports: [{ at: '2026-11-16 16:00', text: '幂等键改为 (accountId, messageId)，200 并发回归通过。' }],
+  },
+  {
+    id: 'a-8a2', taskId: 't-msg-bulk', stage: '等待验收', status: '结束',
+    workerSessionId: 'sess-5f20', createdAt: '2026-11-16 10:05', endedAt: '2026-11-17 14:27',
+    lastReportAt: '2026-11-17 14:26',
+    reports: [
+      { at: '2026-11-16 16:40', text: '批量操作栏完成，自测通过。' },
+      { at: '2026-11-17 14:26', text: '回归通过，附 3 张截图，等待验收。' },
+    ],
+  },
+];
+
+const artifacts = [
+  { id: 'ar-1', taskId: 't-agg-design', attemptId: 'a-t1', type: '文档', title: '聚合视图交互稿', uri: 'design/aggregate-view.fig', content: '按客户聚合、筛选与空态说明。', createdAt: '2026-11-16 11:52' },
+  { id: 'ar-2', taskId: 't-agg-api', attemptId: 'a-7f2', type: '代码', title: '聚合查询改动', uri: 'src/billing/aggregate.ts', content: '新增 byCustomer 聚合；保留明细查询。', createdAt: '2026-11-16 15:48' },
+  { id: 'ar-3', taskId: 't-agg-api', attemptId: 'a-7f3', type: '文档', title: '评审说明', uri: '.xg/reviews/t-agg-api.md', content: '聚合口径：客户 + 账期；基准数据与回滚方式。', createdAt: '2026-11-17 13:57' },
+  { id: 'ar-4', taskId: 't-agg-tests', attemptId: 'a-2c9', type: '证据', title: '边界用例清单', uri: 'tests/aggregate.boundary.ts', content: '空客户 / 跨月 / 并发 20。', createdAt: '2026-11-17 14:10' },
+  { id: 'ar-5', taskId: 't-msg-idem', attemptId: 'a-8a1', type: '证据', title: '并发回归日志', uri: 'evidence/msg-idem/run-0918.log', content: '200 并发重复请求；未读数变化 0。', createdAt: '2026-11-16 16:50' },
+  { id: 'ar-6', taskId: 't-msg-bulk', attemptId: 'a-8a2', type: '证据', title: '回归截图 3 张', uri: 'evidence/batch-read/2026-11-17', content: '批量已读 100 条 / 200 条 / 空选状态。', createdAt: '2026-11-17 14:27' },
+  { id: 'ar-7', taskId: 't-backfill-script', attemptId: 'a-4e1', type: '证据', title: 'dry-run 权限错误', uri: 'evidence/backfill/dry-run.log', content: 'ERROR permission denied for table billing_history.', createdAt: '2026-11-17 10:32' },
+];
+
+const reviews = [
+  { id: 'rv-1', taskId: 't-agg-design', reviewer: '你', decision: '通过', comments: '空态补充一句解释后再交付，信息层级清楚。', createdAt: '2026-11-16 15:40' },
+  { id: 'rv-2', taskId: 't-msg-idem', reviewer: '阿岚', decision: '通过', comments: '幂等键与索引调整合理，并发用例通过。补一条审计日志即可。', createdAt: '2026-11-16 17:15' },
+];
+
+const memories = [
+  {
+    id: 'm-agg-decision', projectId: DEMO.id, type: '决策', status: '待复核',
+    title: '账单聚合以「客户 + 账期」为唯一口径',
+    content: '所有对账视图都按客户与账期聚合；导出保留明细，不改变原始金额精度。若调整口径，需要同步评审说明与基准数据。',
+    sourceType: '任务', sourceRef: 't-agg-api', tags: ['账单', '聚合'], updatedAt: '2026-11-17 12:40',
+  },
+  {
+    id: 'm-backfill', projectId: DEMO.id, type: '经验', status: '已确认',
+    title: '补录脚本先跑只读校验',
+    content: '先在只读副本上跑 counts 与金额合计，再申请写入授权；避免半途失败留下脏数据。',
+    sourceType: '任务', sourceRef: 't-backfill-script', tags: ['补录', '安全'], updatedAt: '2026-11-16 14:20',
+  },
+  {
+    id: 'm-login-retry', projectId: NEW_CENTER_APP.id, type: '故障', status: '待复核',
+    title: '登录态失效会触发三次重试',
+    content: '401 时前端拦截器会重试三次，日志里出现三条相同失败；建议统一成一次可读提示，并清理重复上报。',
+    sourceType: '会话', sourceRef: 'OPS-2261', tags: ['登录', '日志'], updatedAt: '2026-11-17 13:10',
+  },
+  {
+    id: 'm-cursor', projectId: NEW_CENTER_APP.id, type: '领域', status: '已确认',
+    title: '消息游标基于 messageId',
+    content: '消息中心分页游标使用 messageId，不使用时间戳，避免同一秒消息遗漏。',
+    sourceType: '任务', sourceRef: 't-msg-idem', tags: ['消息中心', '分页'], updatedAt: '2026-11-16 16:30',
+  },
+  {
+    id: 'm-contact', projectId: DEMO.id, type: '交接', status: '草稿',
+    title: '财务对接人偏好企微语音',
+    content: '王姐月初忙，尽量用文字列清楚问题与可选方案；季度对账前一周不要约评审。',
+    sourceType: '人工', sourceRef: '客户成功交接', tags: ['协作'], updatedAt: '2026-11-14 10:00',
+  },
+];
+
+const inbox = [
+  {
+    id: 'i-invoice-name', projectId: DEMO.id, channel: '企微', contact: '财务王姐', status: '未处理',
+    rawContext: '季度导出能不能带上客户简称？上次发给客户的名字还是内部编码，客户看不懂。',
+    externalRef: null, receivedAt: '2026-11-17 14:08',
+  },
+  {
+    id: 'i-unread-refresh', projectId: NEW_CENTER_APP.id, channel: '邮箱', contact: '产品林珊', status: '未处理',
+    rawContext: '批量已读上线后，消息列表的未读数偶发不刷新，附了两段录屏。辛苦安排排查一下。',
+    externalRef: 'MAIL-8821', receivedAt: '2026-11-17 11:47',
+  },
+  {
+    id: 'i-build-time', projectId: NEW_CENTER_APP.id, channel: '其他', contact: '同事小唐', status: '未处理',
+    rawContext: '周会提到：中心应用夜间构建从 6 分钟涨到 11 分钟，想安排一次排查。',
+    externalRef: null, receivedAt: '2026-11-16 18:20',
+  },
+  {
+    id: 'i-short-name', projectId: DEMO.id, channel: '企微', contact: '客户成功阿洛', status: '未处理',
+    rawContext: '客户问下一版能否直接按客户简称导出，不用再手工改表头。',
+    externalRef: null, receivedAt: '2026-11-15 10:12',
+  },
+];
+
+const events = [
+  {
+    id: 'e-1', at: '2026-11-17 14:26', kind: 'report', projectId: NEW_CENTER_APP.id,
+    actor: '小雄 · 执行器', title: '报告：批量操作栏回归通过',
+    text: '「回归通过，附 3 张截图，等待验收。」', taskId: 't-msg-bulk', tone: 'green',
+    chips: ['a-8a2', '证据 3 张'],
+  },
+  {
+    id: 'e-2', at: '2026-11-17 14:21', kind: 'report', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '报告：聚合边界用例已补齐',
+    text: '「已覆盖空客户与跨月边界，补了 2 个并发用例，正在跑全量。」', taskId: 't-agg-tests', tone: 'green',
+    chips: ['a-2c9'],
+  },
+  {
+    id: 'e-3', at: '2026-11-17 14:08', kind: 'inbox', projectId: DEMO.id,
+    actor: '财务王姐', title: '收到一条企微消息',
+    text: '「季度导出能不能带上客户简称？上次发给客户的名字还是内部编码。」', inboxId: 'i-invoice-name', tone: 'gray',
+    chips: ['未处理'],
+  },
+  {
+    id: 'e-4', at: '2026-11-17 13:54', kind: 'attempt', projectId: DEMO.id,
+    actor: '系统', title: '评审尝试开始 · a-7f3',
+    text: '实现尝试已结束，评审会话接管，等待你的结论。', taskId: 't-agg-api', tone: 'blue',
+    chips: ['阶段 评审'],
+  },
+  {
+    id: 'e-5', at: '2026-11-17 13:03', kind: 'requirement', projectId: NEW_CENTER_APP.id,
+    actor: '你', title: '新需求 · 统一登录态失效提示',
+    text: '来自电话 · 运维老周。登录失效时只提示「请求失败」，值班需要翻日志。', reqId: 'r-login-prompt', tone: 'ink',
+    chips: ['P0', '待确认'],
+  },
+  {
+    id: 'e-6', at: '2026-11-17 11:47', kind: 'inbox', projectId: NEW_CENTER_APP.id,
+    actor: '产品林珊', title: '收到一封邮件',
+    text: '「批量已读上线后，消息列表未读数偶发不刷新，附了两段录屏。」', inboxId: 'i-unread-refresh', tone: 'gray',
+    chips: ['未处理', 'MAIL-8821'],
+  },
+  {
+    id: 'e-7', at: '2026-11-17 11:18', kind: 'attempt', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '尝试阻塞 · 编写补录脚本',
+    text: '「迁移脚本需要数据库只读授权，当前被权限拦截。」', taskId: 't-backfill-script', tone: 'red', attention: true,
+    chips: ['等待授权', '已等 3 小时'],
+  },
+  {
+    id: 'e-8', at: '2026-11-17 10:32', kind: 'confirm', projectId: DEMO.id,
+    actor: '你', title: '确认需求 #DEMO-11',
+    text: '需求进入可拆任务状态。', reqId: 'r-export-reason', tone: 'blue',
+    chips: ['#DEMO-11'],
+  },
+  {
+    id: 'e-9', at: '2026-11-17 09:20', kind: 'requirement', projectId: DEMO.id,
+    actor: '你', title: '新需求 · 账单导出需要支持按月拆分',
+    text: '从企微收件建立。客户对账既要按月看，也要能一次导出季度。', reqId: 'r-export-month', tone: 'ink',
+    chips: ['P1', '待确认'],
+  },
+  {
+    id: 'e-10', at: '2026-11-16 18:32', kind: 'accept', projectId: NEW_CENTER_APP.id,
+    actor: '你', title: '验收通过 · 批量已读接口幂等处理',
+    text: '任务关闭；运行记录、证据与审计保留在任务详情。', taskId: 't-msg-idem', tone: 'green',
+    chips: ['验收人 你'],
+  },
+  {
+    id: 'e-11', at: '2026-11-16 17:15', kind: 'review', projectId: NEW_CENTER_APP.id,
+    actor: '阿岚', title: '评审通过 · 批量已读接口幂等处理',
+    text: '「幂等键与索引调整合理，并发用例通过。补一条审计日志即可。」', taskId: 't-msg-idem', tone: 'green',
+    chips: ['通过'],
+  },
+  {
+    id: 'e-12', at: '2026-11-16 16:50', kind: 'evidence', projectId: NEW_CENTER_APP.id,
+    actor: '小雄 · 执行器', title: '证据提交 · 并发回归日志',
+    text: '覆盖 200 并发重复请求，未产生额外未读变化。', taskId: 't-msg-idem', tone: 'green',
+    chips: ['证据'],
+  },
+  {
+    id: 'e-13', at: '2026-11-16 15:42', kind: 'report', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '报告：按客户聚合已实现',
+    text: '「10 万行基准 640ms，已提交变更说明与基准数据。」', taskId: 't-agg-api', tone: 'green',
+    chips: ['a-7f2'],
+  },
+  {
+    id: 'e-14', at: '2026-11-16 15:40', kind: 'review', projectId: DEMO.id,
+    actor: '你', title: '评审通过 · 设计账单聚合视图',
+    text: '「空态补充一句解释后再交付，信息层级清楚。」', taskId: 't-agg-design', tone: 'green',
+    chips: ['通过'],
+  },
+  {
+    id: 'e-15', at: '2026-11-16 13:10', kind: 'attempt', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '尝试开始 · 补充聚合边界用例',
+    text: '执行器接管，计划覆盖空客户、跨月与并发三类边界。', taskId: 't-agg-tests', tone: 'blue',
+    chips: ['阶段 执行中'],
+  },
+  {
+    id: 'e-16', at: '2026-11-16 10:05', kind: 'requirement', projectId: DEMO.id,
+    actor: '你', title: '新需求 · 导出失败时给出可读原因',
+    text: '来源 电话 · 客服小林：客户看不懂 EXPORT_FAILED。', reqId: 'r-export-reason', tone: 'ink',
+    chips: ['P1', '已确认'],
+  },
+  {
+    id: 'e-17', at: '2026-11-16 09:58', kind: 'report', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '报告：聚合 SQL 超时',
+    text: '「构建失败：10 万行样本超过 8s，已回退到明细聚合方案。」', taskId: 't-agg-api', tone: 'red', attention: true,
+    chips: ['a-7f1', '失败'],
+  },
+  {
+    id: 'e-18', at: '2026-11-16 09:30', kind: 'attempt', projectId: DEMO.id,
+    actor: '小雄 · 执行器', title: '尝试开始 · 实现按客户聚合查询',
+    text: '执行器接管，开始按客户维度实现聚合查询。', taskId: 't-agg-api', tone: 'blue',
+    chips: ['阶段 执行中'],
+  },
+  {
+    id: 'e-19', at: '2026-11-15 16:45', kind: 'split', projectId: DEMO.id,
+    actor: '你', title: '需求 #DEMO-09 拆出 3 个任务',
+    text: '设计聚合视图 / 实现按客户聚合查询 / 补充聚合边界用例。', reqId: 'r-aggregate', tone: 'ink',
+    chips: ['3 个任务'],
+  },
+  {
+    id: 'e-20', at: '2026-11-15 16:20', kind: 'requirement', projectId: DEMO.id,
+    actor: '你', title: '新需求 · 对账单列表按客户聚合',
+    text: '来源 邮件 · 客户成功周会：客户希望按客户看合计，不只看明细。', reqId: 'r-aggregate', tone: 'ink',
+    chips: ['P2'],
+  },
+  {
+    id: 'e-21', at: '2026-11-15 13:40', kind: 'split', projectId: NEW_CENTER_APP.id,
+    actor: '你', title: '需求 #NCA-26 拆出 2 个任务',
+    text: '消息中心批量操作栏 / 批量已读接口幂等处理。', reqId: 'r-batch-read', tone: 'ink',
+    chips: ['2 个任务'],
+  },
+  {
+    id: 'e-22', at: '2026-11-15 11:20', kind: 'requirement', projectId: NEW_CENTER_APP.id,
+    actor: '你', title: '新需求 · 消息中心支持批量已读',
+    text: '来源 企微 · 产品林珊。运营每天要处理上千条消息。', reqId: 'r-batch-read', tone: 'ink',
+    chips: ['P1'],
+  },
+];
+
+/* ============================================================
+   2 · clock, labels, small domain helpers
+   ============================================================ */
+const BASE_NOW = new Date('2026-11-17T14:32:00');
+let clock = new Date(BASE_NOW);
+
+const DAY_META = {
+  '2026-11-17': { label: '今天', sub: '11月17日 周二', today: true },
+  '2026-11-16': { label: '昨天', sub: '11月16日 周一', today: false },
+  '2026-11-15': { label: '11月15日', sub: '周日', today: false },
+};
+const eventMeta = {
+  requirement: { label: '承诺', dot: 'ink' },
+  split: { label: '拆解', dot: 'ink' },
+  confirm: { label: '确认', dot: 'blue' },
+  attempt: { label: '执行', dot: 'blue' },
+  report: { label: '报告', dot: 'green' },
+  evidence: { label: '证据', dot: 'green' },
+  review: { label: '评审', dot: 'amber' },
+  accept: { label: '验收', dot: 'green' },
+  inbox: { label: '收件', dot: 'gray' },
+};
+const FILTERS = [
+  { id: 'all', label: '全部' },
+  { id: 'commit', label: '承诺' },
+  { id: 'exec', label: '执行' },
+  { id: 'review', label: '评审' },
+  { id: 'inbox', label: '收件' },
+];
+const TABS = [
+  ['overview', '概览'], ['projects', '项目'], ['requirements', '需求'], ['tasks', '任务'],
+  ['inbox', '收件箱'], ['memory', '记忆'], ['reviews', '评审'],
+];
+
+function projectOf(id) { return byId(PROJECTS, id); }
+function reqOf(task) { return byId(requirements, task.requirementId); }
+function tasksOfReq(reqId) { return tasks.filter(task => task.requirementId === reqId); }
+function attemptsOfTask(taskId) {
+  return attempts.filter(attempt => attempt.taskId === taskId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+function latestAttempt(task) {
+  if (task.currentAttemptId) {
+    const current = byId(attempts, task.currentAttemptId);
+    if (current) return current;
+  }
+  const all = attemptsOfTask(task.id);
+  return all[all.length - 1];
+}
+function inboxOpen() { return inbox.filter(item => item.status === '未处理'); }
+function scopeProjectId() { return state.timelineScope === 'all' ? null : state.projectId; }
+function currentProject() { return projectOf(state.projectId) || DEMO; }
+function stamp() {
+  clock = new Date(clock.getTime() + 60000);
+  return `2026-11-17 ${pad2(clock.getHours())}:${pad2(clock.getMinutes())}`;
+}
+function nowClockText() { return `${pad2(clock.getHours())}:${pad2(clock.getMinutes())}`; }
+function timeAgo(at) {
+  if (!at) return '—';
+  const date = new Date(at.replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) return at;
+  const mins = Math.max(0, Math.floor((clock - date) / 60000));
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins} 分钟前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 8) return `${days} 天前`;
+  return `${Math.floor(days / 7)} 周前`;
+}
+function waitingFor(at) {
+  const date = new Date(at.replace(' ', 'T'));
+  const mins = Math.max(0, Math.floor((clock - date) / 60000));
+  if (mins < 60) return `${mins} 分钟`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} 小时`;
+  return `${Math.floor(hours / 24)} 天`;
+}
+function dayMeta(date) {
+  return DAY_META[date] || {
+    label: `${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`,
+    sub: '',
+    today: false,
+  };
+}
+function createdLabel(at) {
+  if (!at) return '';
+  const date = at.slice(0, 10);
+  const meta = dayMeta(date);
+  if (date === '2026-11-17') return `今天 ${at.slice(11, 16)}`;
+  if (date === '2026-11-16') return `昨天 ${at.slice(11, 16)}`;
+  return `${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`;
+}
+function sortByUpdated(items) {
+  return [...items].sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
+}
+function priorityTag(priority) {
+  if (!priority) return '';
+  return `<span class="tag priority ${PRIORITY_CLASS[priority] || 'p2'}">${esc(priority)}</span>`;
+}
+function sourceShort(note) {
+  if (!note) return '手动记录';
+  return note.split('：')[0];
+}
+function sourceIcon(note) {
+  if (!note) return 'doc';
+  if (note.startsWith('企微')) return 'inbox';
+  if (note.startsWith('电话')) return 'clock';
+  if (note.startsWith('邮件')) return 'doc';
+  return 'doc';
+}
+function taskStatusSts(task) {
+  return `<span class="sts ${TASK_DOT[task.status] === 'blue' ? 'blue' : TASK_DOT[task.status] === 'red' ? 'red' : TASK_DOT[task.status] === 'amber' ? 'amber' : TASK_DOT[task.status] === 'green' ? 'green' : ''}"><span class="dot ${TASK_DOT[task.status]}"></span>${esc(task.status)}</span>`;
+}
+function taskSignal(ts) {
+  if (!ts.length) return '还未拆任务';
+  if (ts.some(t => t.status === '阻塞')) return '有阻塞';
+  if (ts.some(t => t.status === '评审')) return '评审中';
+  if (ts.some(t => t.status === '待验收')) return '待验收';
+  if (ts.every(t => t.status === '完成' || t.status === '取消')) return '全部结束';
+  return '推进中';
+}
+function projectStats(projectId) {
+  const reqs = requirements.filter(req => req.projectId === projectId);
+  const ts = tasks.filter(task => task.projectId === projectId);
+  return {
+    totalReqs: reqs.length,
+    openReqs: reqs.filter(req => req.status !== '已关闭').length,
+    pending: reqs.filter(req => req.status === '待确认').length,
+    active: ts.filter(task => ['进行中', '评审', '待验收'].includes(task.status)).length,
+    blocked: ts.filter(task => task.status === '阻塞').length,
+    needs: nowItemsFor(projectId).length,
+  };
+}
+function projectLastActivity(projectId) {
+  const item = events.find(ev => ev.projectId === projectId);
+  return item ? timeAgo(item.at) : '无活动';
+}
+
+/* ============================================================
+   3 · derived "now" and activity models
+   ============================================================ */
+function makeNowItem(kind, opts) {
+  return {
+    key: `${kind}-${opts.id}`,
+    kind, kindLabel: opts.kindLabel, kindClass: opts.kindClass || '',
+    title: opts.title, meta: opts.meta || [], dot: opts.dot || 'amber',
+    rank: opts.rank ?? 9, cta: opts.cta, action: opts.action, id: opts.id,
+    projectId: opts.projectId,
+  };
+}
+function nowItemsFor(projectId) {
+  const inScope = id => !projectId || id === projectId;
+  const items = [];
+  requirements
+    .filter(req => req.status === '待确认' && inScope(req.projectId))
+    .forEach(req => {
+      const project = projectOf(req.projectId);
+      items.push(makeNowItem('req', {
+        id: req.id, projectId: req.projectId, kindLabel: '需求待确认',
+        kindClass: req.priority === 'P0' ? 'red' : 'warn', dot: req.priority === 'P0' ? 'red' : 'amber',
+        title: req.title, meta: [project.shortCode, req.priority || 'P2', `等 ${waitingFor(req.createdAt)}`],
+        rank: req.priority === 'P0' ? 1 : 3, cta: '确认', action: 'confirm-req',
+      }));
+    });
+  tasks
+    .filter(task => inScope(task.projectId))
+    .forEach(task => {
+      const project = projectOf(task.projectId);
+      const attempt = latestAttempt(task);
+      if (task.status === '阻塞') {
+        items.push(makeNowItem('task', {
+          id: task.id, projectId: task.projectId, kindLabel: '阻塞', kindClass: 'red', dot: 'red',
+          title: task.title, meta: [project.shortCode, task.attention || '需要处理', `等 ${waitingFor(task.updatedAt)}`],
+          rank: 2, cta: '处理', action: 'open-task',
+        }));
+      } else if (task.status === '评审') {
+        items.push(makeNowItem('review', {
+          id: task.id, projectId: task.projectId, kindLabel: '等你评审', kindClass: 'warn', dot: 'amber',
+          title: task.title, meta: [project.shortCode, attempt ? attempt.stage : '评审', `更新 ${timeAgo(task.updatedAt)}`],
+          rank: 4, cta: '评审', action: 'open-task',
+        }));
+      } else if (task.status === '待验收') {
+        items.push(makeNowItem('accept', {
+          id: task.id, projectId: task.projectId, kindLabel: '待验收', kindClass: 'blue', dot: 'amber',
+          title: task.title, meta: [project.shortCode, attempt ? attempt.stage : '待验收', `更新 ${timeAgo(task.updatedAt)}`],
+          rank: 5, cta: '验收', action: 'open-task',
+        }));
+      }
+    });
+  memories
+    .filter(memory => memory.status === '待复核' && inScope(memory.projectId))
+    .forEach(memory => {
+      items.push(makeNowItem('memory', {
+        id: memory.id, projectId: memory.projectId, kindLabel: '记忆待复核', kindClass: '', dot: 'amber',
+        title: memory.title, meta: [memory.type, projectOf(memory.projectId).shortCode, `更新 ${timeAgo(memory.updatedAt)}`],
+        rank: 6, cta: '复核', action: 'open-memory',
+      }));
+    });
+  return items.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title, 'zh'));
+}
+function nextItemsFor(projectId) {
+  const inScope = id => !projectId || id === projectId;
+  const readyTasks = tasks
+    .filter(task => task.status === '就绪' && inScope(task.projectId))
+    .map(task => ({
+      key: `next-${task.id}`, projectId: task.projectId, dot: 'gray', title: task.title,
+      kind: 'task', id: task.id, cta: '派发', action: 'dispatch-task', meta: '任务就绪',
+    }));
+  const unsplitReqs = requirements
+    .filter(req => req.status === '已确认' && !tasksOfReq(req.id).length && inScope(req.projectId))
+    .map(req => ({
+      key: `next-${req.id}`, projectId: req.projectId, dot: 'ink', title: req.title,
+      kind: 'req', id: req.id, cta: '拆任务', action: 'split-req', meta: '需求已确认',
+    }));
+  return [...unsplitReqs, ...readyTasks].slice(0, 4);
+}
+function inboxCountFor(projectId) {
+  return inboxOpen().filter(item => !projectId || item.projectId === projectId).length;
+}
+function eventMatches(ev) {
+  const filter = state.eventFilter;
+  if (filter === 'all') return true;
+  if (filter === 'commit') return ['requirement', 'split', 'confirm'].includes(ev.kind);
+  if (filter === 'exec') return ['attempt', 'report', 'evidence'].includes(ev.kind);
+  if (filter === 'review') return ['review', 'accept'].includes(ev.kind);
+  if (filter === 'inbox') return ev.kind === 'inbox';
+  return true;
+}
+
+/* ============================================================
+   4 · global state
+   ============================================================ */
+const state = {
+  tab: 'overview',
+  projectId: DEMO.id,
+  timelineScope: 'project', // project | all
+  eventFilter: 'all',
+  reqScope: 'current', // current | all
+  reqStatus: 'all',
+  expandedReq: 'r-aggregate',
+  taskFilter: 'all',
+  memoryFilter: 'all',
+  detailTaskId: null,
+  composer: null, // { mode: 'create' | 'split' | 'triage', reqId?, inboxId? }
+  deleteTaskId: null,
+  projectMenuOpen: false,
+  bellOpen: false,
+  searchOpen: false,
+};
+
+/* ============================================================
+   5 · chrome (topbar switcher, tabs, sticky context)
+   ============================================================ */
+function renderChrome() {
+  $('#projectSwitch').innerHTML = projectSwitchHtml();
+  $('#tabbar').innerHTML = tabbarHtml();
+  $('#contextbar').innerHTML = contextHtml();
+  $('#bellWrap').innerHTML = bellHtml();
+}
+
+function projectSwitchHtml() {
+  const project = currentProject();
+  return `
+    <button class="project-btn" data-action="toggle-project-menu" aria-expanded="${state.projectMenuOpen}" aria-haspopup="menu">
+      <span class="proj-code">${esc(project.shortCode)}</span>
+      <span class="proj-btn-name">${esc(project.name)}</span>
+      ${icon('chevDown', 11)}
+    </button>
+    ${state.projectMenuOpen ? `
+      <div class="project-menu" role="menu">
+        <div class="menu-label">切换项目 · 第一层上下文</div>
+        ${PROJECTS.map(item => {
+          const stats = projectStats(item.id);
+          return `<button class="project-option" role="menuitem" data-action="switch-project" data-id="${item.id}" aria-current="${item.id === project.id}">
+            <span class="dot ${item.status === '活跃' ? 'green' : 'gray'}"></span>
+            <span class="opt-main">
+              <span class="opt-name">${esc(item.name)}</span>
+              <span class="opt-code">${esc(item.shortCode)} · ${stats.openReqs} 个未关闭需求</span>
+            </span>
+            <span class="opt-check">${item.id === project.id ? icon('check', 12) : ''}</span>
+          </button>`;
+        }).join('')}
+        <div class="menu-sep"></div>
+        <button class="menu-foot" data-action="scope-all">
+          ${icon('flow', 13)}<span>在时间线中纵览全部项目</span>${icon('arrow', 12)}
+        </button>
+      </div>` : ''}
+  `;
+}
+
+function tabbarHtml() {
+  const open = inboxOpen().length;
+  return TABS.map(([id, label]) => {
+    const badge = id === 'inbox' && open ? `<span class="tab-badge">${open}</span>` : '';
+    return `<button class="tab" role="tab" data-action="tab" data-tab="${id}" aria-selected="${state.tab === id}" id="tab-${id}">${label}${badge}</button>`;
+  }).join('') + `<span class="tab-spacer"></span><span class="sync-note"><i class="sync-dot"></i>已同步 ${nowClockText()} · 本地原型</span>`;
+}
+
+function contextHtml() {
+  const project = currentProject();
+  const portfolio = (state.tab === 'overview' && state.timelineScope === 'all')
+    || (state.tab === 'requirements' && state.reqScope === 'all');
+  if (portfolio) {
+    const openReqs = requirements.filter(req => req.status !== '已关闭').length;
+    const needs = nowItemsFor(null).length;
+    const running = tasks.filter(task => task.status === '进行中').length;
+    const blocked = tasks.filter(task => task.status === '阻塞').length;
+    const latest = [...events].sort((a, b) => b.at.localeCompare(a.at))[0];
+    return `
+      <div class="ctx-main">
+        <div class="ctx-badge" aria-hidden="true">2P</div>
+        <div class="ctx-text">
+          <div class="ctx-title">
+            <span class="ctx-code">PORTFOLIO</span>
+            <span class="ctx-name">全景 · 全部项目</span>
+            <span class="ctx-state" style="color:var(--accent)"><span class="dot blue"></span>跨项目</span>
+          </div>
+          <div class="ctx-meta">
+            <span>${PROJECTS.length} 个项目</span>
+            <span class="ctx-sep"></span>
+            <span>${openReqs} 个未关闭需求</span>
+            <span class="ctx-sep"></span>
+            <span>最近活动 ${latest ? timeAgo(latest.at) : '—'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="ctx-side">
+        <div class="ctx-metrics">
+          <div class="ctx-metric hot" title="全部项目中需要你处理的事项"><b>${needs}</b><span>待你</span></div>
+          <div class="ctx-metric"><b>${running}</b><span>进行中</span></div>
+          <div class="ctx-metric alert"><b>${blocked}</b><span>阻塞</span></div>
+        </div>
+        <button class="btn primary sm" data-action="new-requirement">${icon('plus', 11)}<span class="long">新建需求</span></button>
+      </div>`;
+  }
+  const stats = projectStats(project.id);
+  const running = tasks.filter(task => task.projectId === project.id && task.status === '进行中').length;
+  return `
+    <div class="ctx-main">
+      <div class="ctx-badge" aria-hidden="true">${esc(project.shortCode.charAt(0))}</div>
+      <div class="ctx-text">
+        <div class="ctx-title">
+          <span class="ctx-code">${esc(project.shortCode)}</span>
+          <span class="ctx-name">${esc(project.name)}</span>
+          <span class="ctx-state"><span class="dot green"></span>${esc(project.status)}</span>
+          <span class="ctx-tag">${esc(project.sensitivity)}</span>
+        </div>
+        <div class="ctx-meta">
+          ${icon('folder', 10)}<span class="path">${esc(project.rootPath)}</span>
+          <span class="ctx-sep"></span>
+          <span>${stats.openReqs} 个未关闭需求</span>
+          <span class="ctx-sep"></span>
+          <span>最近活动 ${projectLastActivity(project.id)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="ctx-side">
+      <div class="ctx-metrics">
+        <div class="ctx-metric hot" title="此刻需要你处理的事项"><b>${stats.needs}</b><span>待你</span></div>
+        <div class="ctx-metric"><b>${running}</b><span>进行中</span></div>
+        <div class="ctx-metric alert"><b>${stats.blocked}</b><span>阻塞</span></div>
+      </div>
+      <button class="btn primary sm" data-action="new-requirement">${icon('plus', 11)}<span class="long">新建需求</span></button>
+    </div>`;
+}
+
+function bellHtml() {
+  const items = nowItemsFor(scopeProjectId());
+  const count = items.length;
+  const top = items.slice(0, 4);
+  return `
+    <button class="icon-btn" data-action="toggle-bell" aria-label="此刻需要你" aria-expanded="${state.bellOpen}">
+      ${icon('bell', 16)}
+      ${count ? `<span class="bell-badge">${count}</span>` : ''}
+    </button>
+    ${state.bellOpen ? `
+      <div class="bell-pop" role="dialog" aria-label="此刻需要你">
+        <div class="menu-label">此刻 · ${state.timelineScope === 'all' ? '全部项目' : esc(currentProject().shortCode)}</div>
+        ${top.length ? top.map(item => `
+          <button class="bell-item" data-action="${item.action}" data-id="${item.id}">
+            <span class="dot ${item.dot}" style="margin-top:5px"></span>
+            <span>
+              <span class="bell-kind">${item.kindLabel}</span>
+              <span class="bell-title">${esc(item.title)}</span>
+            </span>
+            <span class="bell-cta">${item.cta}</span>
+          </button>`).join('') : `<div class="search-empty">此刻没有等你的事。</div>`}
+        <div class="menu-sep"></div>
+        <button class="menu-foot" data-action="tab" data-tab="overview">打开工作流 ${icon('arrow', 11)}</button>
+      </div>` : ''}`;
+}
+
+/* ============================================================
+   6 · view shell
+   ============================================================ */
+function renderAll(options = {}) {
+  const scrollEl = $('#scroll');
+  const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+  const detailBody = $('.detail-body');
+  const detailScroll = detailBody ? detailBody.scrollTop : 0;
+
+  renderChrome();
+  $('#view').innerHTML = `<div class="view-inner">${viewHtml()}</div>`;
+  renderOverlays();
+
+  if (scrollEl) {
+    if (options.resetScroll) scrollEl.scrollTop = 0;
+    else scrollEl.scrollTop = scrollTop;
+  }
+  const nextDetailBody = $('.detail-body');
+  if (nextDetailBody && detailScroll) nextDetailBody.scrollTop = detailScroll;
+}
+
+function viewHtml() {
+  switch (state.tab) {
+    case 'projects': return projectsHtml();
+    case 'requirements': return requirementsHtml();
+    case 'tasks': return tasksHtml();
+    case 'inbox': return inboxHtml();
+    case 'memory': return memoryHtml();
+    case 'reviews': return reviewsHtml();
+    case 'overview':
+    default: return overviewHtml();
+  }
+}
+
+function pageHead(eyebrow, title, sub, action = '') {
+  return `<div class="page-head">
+    <div>
+      <div class="eyebrow">${eyebrow}</div>
+      <h1>${title}</h1>
+      <p class="page-sub">${sub}</p>
+    </div>
+    ${action}
+  </div>`;
+}
+
+/* ============================================================
+   7 · overview: commitment strip + activity stream + now panel
+   ============================================================ */
+function overviewHtml() {
+  const scopedById = item => state.timelineScope === 'all' || item.projectId === state.projectId;
+  const evs = events
+    .filter(ev => scopedById(ev) && eventMatches(ev))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  const project = currentProject();
+  return `
+    <div class="flow-head">
+      <div>
+        <div class="eyebrow">FLOW · 时间线工作流</div>
+        <h1>工作流 <span class="title-count">${evs.length} 条活动</span></h1>
+        <p class="page-sub">承诺、执行与评审汇成一条线；右侧只留此刻需要你的事。</p>
+        <div class="flow-meta">
+          <span class="dot green"></span>
+          <span>${state.timelineScope === 'all' ? '全景 · 2 个项目' : `专注 · ${esc(project.name)}`}</span>
+          <span class="ctx-sep"></span>
+          <span>11月17日 周二</span>
+          <span class="ctx-sep"></span>
+          <span>更新于 ${nowClockText()}</span>
+        </div>
+      </div>
+      <div class="seg" role="group" aria-label="时间线范围">
+        <button data-action="timeline-scope" data-scope="project" aria-pressed="${state.timelineScope === 'project'}">当前项目</button>
+        <button data-action="timeline-scope" data-scope="all" aria-pressed="${state.timelineScope === 'all'}">全部项目</button>
+      </div>
+    </div>
+    ${commitmentStripHtml()}
+    <div class="flow-grid">
+      <div class="flow-main">
+        <div class="stream-head">
+          <h2>活动</h2>
+          <span class="stream-note">按发生时间倒序 · 薄轨连接</span>
+          <div class="filters">
+            ${FILTERS.map(filter => `<button class="chip" data-action="event-filter" data-filter="${filter.id}" aria-pressed="${state.eventFilter === filter.id}">${filter.label}</button>`).join('')}
+          </div>
+        </div>
+        ${eventsHtml(evs)}
+      </div>
+      ${nowPanelHtml()}
+    </div>`;
+}
+
+function commitmentStripHtml() {
+  const reqs = requirements.filter(req => state.timelineScope === 'all' || req.projectId === state.projectId);
+  const counts = Object.fromEntries(REQUIREMENT_STATUSES.map(status => [status, reqs.filter(req => req.status === status).length]));
+  const open = counts['待确认'] + counts['已确认'] + counts['已拆分'];
+  return `
+    <section class="commit-strip" aria-label="需求状态分布">
+      <div class="commit-lead">
+        <div class="eyebrow">承诺</div>
+        <div class="commit-total"><b>${open}</b><span>个未关闭</span></div>
+      </div>
+      <div class="commit-body">
+        <div class="commit-bar" role="img" aria-label="${REQUIREMENT_STATUSES.map(status => `${status} ${counts[status]}`).join('，')}">
+          ${REQUIREMENT_STATUSES.map(status => counts[status] ? `<span class="commit-seg" data-k="${status}" style="flex-grow:${counts[status]};flex-basis:0"></span>` : '').join('')}
+        </div>
+        <div class="commit-legend">
+          ${REQUIREMENT_STATUSES.map(status => `<button data-action="req-status-jump" data-status="${status}"><span class="dot ${REQ_DOT[status]}"></span>${status} <b>${counts[status]}</b></button>`).join('')}
+        </div>
+      </div>
+      <button class="commit-link" data-action="tab" data-tab="requirements">查看需求 →</button>
+    </section>`;
+}
+
+function eventsHtml(evs) {
+  if (!evs.length) {
+    return `<p class="stream-empty">这个筛选下还没有活动。切回「全部」看看承诺与执行的全貌。</p>`;
+  }
+  let lastDate = '';
+  let html = '';
+  evs.forEach(ev => {
+    const date = ev.at.slice(0, 10);
+    if (date !== lastDate) {
+      if (lastDate) html += '</ol></section>';
+      const meta = dayMeta(date);
+      const count = evs.filter(item => item.at.slice(0, 10) === date).length;
+      html += `<section class="day">
+        <div class="day-head">
+          <span class="day-label ${meta.today ? 'today' : ''}">${meta.label}${meta.sub ? `<em>${meta.sub}</em>` : ''}</span>
+          <span class="day-count">${count} 条</span>
+        </div>
+        <ol class="events">`;
+      lastDate = date;
+    }
+    html += eventHtml(ev);
+  });
+  if (lastDate) html += '</ol></section>';
+  return html + `<p class="stream-foot">${icon('check', 11)} 已展示最近 3 天的活动 · 原型使用模拟数据</p>`;
+}
+
+function eventHtml(ev) {
+  const meta = eventMeta[ev.kind] || { label: '活动', dot: 'gray' };
+  const project = projectOf(ev.projectId);
+  const task = ev.taskId ? byId(tasks, ev.taskId) : null;
+  const req = ev.reqId ? byId(requirements, ev.reqId) : (task ? reqOf(task) : null);
+  const action = task ? 'open-task' : req ? 'open-req' : ev.inboxId ? 'open-inbox' : 'tab';
+  const id = task ? task.id : req ? req.id : ev.inboxId || 'overview';
+  const dataTab = action === 'tab' ? ' data-tab="inbox"' : '';
+  const reqId = req ? req.id : '';
+  const dot = ev.tone || meta.dot;
+  const chips = (ev.chips || []).map(chip => `<span class="ev-chip ${/等待|阻塞|失败/.test(chip) ? 'warn' : ''}">${esc(chip)}</span>`).join('');
+  const targetLabel = task ? '打开任务' : req ? '打开需求' : '打开收件箱';
+  return `
+    <li class="event" data-action="${action}" data-id="${esc(id)}"${dataTab} data-event-req="${esc(reqId)}" data-event-id="${esc(ev.id)}" tabindex="0" role="button">
+      <time class="ev-time ${ev.id.startsWith('live-') ? 'live' : ''}">${ev.id.startsWith('live-') ? '刚刚' : ev.at.slice(11, 16)}</time>
+      <span class="ev-rail"><span class="ev-dot ${dot} ${ev.attention ? 'ring' : ''}"></span></span>
+      <div class="ev-main">
+        <div class="ev-kicker">
+          <span class="ev-kind">${meta.label}</span>
+          <span>${esc(ev.actor || '')}</span>
+          ${state.timelineScope === 'all' ? `<span class="ev-proj">${esc(project ? project.shortCode : '')}</span>` : ''}
+        </div>
+        <p class="ev-title">${esc(ev.title)}</p>
+        ${ev.text ? `<p class="ev-text">${esc(ev.text)}</p>` : ''}
+        ${chips ? `<div class="ev-chips">${chips}</div>` : ''}
+      </div>
+      <span class="ev-open">${targetLabel} ${icon('arrow', 10)}</span>
+    </li>`;
+}
+
+function nowPanelHtml() {
+  const projectId = scopeProjectId();
+  const items = nowItemsFor(projectId);
+  const running = tasks.filter(task => (projectId ? task.projectId === projectId : true) && task.status === '进行中');
+  const next = nextItemsFor(projectId);
+  const inboxCount = inboxCountFor(projectId);
+  const project = currentProject();
+  return `
+    <aside class="now-panel" aria-label="此刻需要你">
+      <div class="now-head">
+        <span class="now-mark"></span>
+        <h2>此刻 <em>NOW</em></h2>
+        <span class="now-total">${items.length ? `${items.length} 件在等你` : '没有待办'}</span>
+      </div>
+      <p class="now-sub">${state.timelineScope === 'all' ? '跨项目汇总；只显示真正需要人判断的事。' : `只看 ${esc(project.shortCode)}；其余都在轨道上。`}</p>
+      ${items.length ? `<ul class="now-items">
+        ${items.map(item => `<li class="now-item">
+          <span class="dot ${item.dot} ${item.dot === 'red' ? 'ring-red' : item.dot === 'amber' ? 'ring-amber' : ''}"></span>
+          <div>
+            <div class="now-kind ${item.kindClass}">${item.kindLabel}</div>
+            <p class="now-title">${esc(item.title)}</p>
+            <div class="now-meta">${item.meta.map(text => `<span class="${/^P[0-3]$/.test(text) ? 'p' : ''}">${esc(text)}</span>`).join('<span>·</span>')}</div>
+          </div>
+          <button class="now-cta" data-action="${item.action}" data-id="${item.id}">${item.cta}</button>
+        </li>`).join('')}
+      </ul>` : `<p class="now-empty">此刻没有等你的事。正在发生的尝试会继续在下方保持可见。</p>`}
+      <hr class="now-rule">
+      <div class="now-section">
+        <div class="now-section-head">正在发生 <span class="n">${running.length}</span></div>
+        ${running.length ? running.map(task => {
+          const attempt = latestAttempt(task);
+          const projectCode = projectOf(task.projectId).shortCode;
+          return `<button class="running-item" data-action="open-task" data-id="${task.id}">
+            <span class="pulse"></span>
+            <span class="run-main">
+              <span class="run-title">${esc(task.title)}</span>
+              <span class="run-meta"><span>${esc(projectCode)}</span><span>·</span><span>${esc(attempt ? attempt.stage : '执行中')}</span><span>·</span><span>${attempt ? timeAgo(attempt.lastReportAt || attempt.createdAt) : '刚刚'}报告</span></span>
+            </span>
+          </button>`;
+        }).join('') : `<p class="now-empty" style="border-top:0;padding:5px 0">当前没有进行中的尝试。</p>`}
+      </div>
+      ${next.length ? `<div class="now-section">
+        <div class="now-section-head">接下来 <span class="n">${next.length}</span></div>
+        ${next.map(item => `<div class="next-item">
+          <span class="dot ${item.dot}"></span>
+          <span class="next-title" title="${esc(item.title)}">${esc(item.title)}</span>
+          <button class="next-link" data-action="${item.action}" data-id="${item.id}">${item.cta}</button>
+        </div>`).join('')}
+      </div>` : ''}
+      ${inboxCount ? `<button class="now-inbox" data-action="tab" data-tab="inbox">${icon('inbox', 12)}<span>收件箱 <b>${inboxCount} 条</b>未处理</span>${icon('arrow', 11)}</button>` : ''}
+    </aside>`;
+}
+
+/* ============================================================
+   8 · projects
+   ============================================================ */
+function projectsHtml() {
+  return `
+    ${pageHead('PROJECTS · 第一层上下文', `项目 <span class="title-count">${PROJECTS.length} 个</span>`,
+      '先确定项目，再谈需求、任务与尝试。项目设置与系统设置在视觉上保持分离。',
+      `<button class="btn" data-action="new-requirement">${icon('plus', 12)} 新建需求</button>`)}
+    <div class="project-grid">
+      ${PROJECTS.map(project => {
+        const stats = projectStats(project.id);
+        const isCurrent = project.id === state.projectId;
+        return `<article class="project-card ${isCurrent ? 'current' : ''}">
+          <div class="project-top">
+            <span class="project-code">${esc(project.shortCode)}</span>
+            <span class="sts"><span class="dot green"></span>${esc(project.status)}</span>
+            <span class="tag soft">${esc(project.sensitivity)}</span>
+            ${isCurrent ? `<span class="tag status" style="margin-left:auto">当前项目</span>` : ''}
+          </div>
+          <h2>${esc(project.name)}</h2>
+          <p class="project-desc">${esc(project.description)}</p>
+          <p class="project-root">${esc(project.rootPath)}</p>
+          <div class="project-stats">
+            <div class="project-stat"><b>${stats.openReqs}</b><span>未关闭需求</span></div>
+            <div class="project-stat"><b>${stats.active}</b><span>推进中的任务</span></div>
+            <div class="project-stat"><b>${stats.needs}</b><span>此刻待你</span></div>
+            <div class="project-stat"><b>${stats.blocked}</b><span>阻塞</span></div>
+          </div>
+          <div class="project-foot">
+            <span class="last">最近活动 ${projectLastActivity(project.id)}</span>
+            <button class="btn sm ${isCurrent ? 'ghost' : ''}" data-action="${isCurrent ? 'home' : 'switch-project'}" data-id="${project.id}">
+              ${isCurrent ? '回到工作流' : '切换到该项目'} ${icon('arrow', 10)}
+            </button>
+          </div>
+        </article>`;
+      }).join('')}
+    </div>
+    <div class="hierarchy-strip">
+      <span class="eyebrow" style="margin-right:2px">HIERARCHY</span>
+      <span class="hier-step"><span class="dot blue"></span><b>项目</b></span>
+      <span class="hier-arrow">${icon('chevRight', 10)}</span>
+      <span class="hier-step"><span class="dot ink"></span><b>需求</b></span>
+      <span class="hier-arrow">${icon('chevRight', 10)}</span>
+      <span class="hier-step"><span class="dot green"></span><b>任务</b></span>
+      <span class="hier-arrow">${icon('chevRight', 10)}</span>
+      <span class="hier-step"><span class="dot amber"></span><b>执行尝试 / 证据 / 评审</b></span>
+      <span style="margin-left:auto">尝试只进入任务详情，不污染任务列表。</span>
+    </div>`;
+}
+
+/* ============================================================
+   9 · requirements, grouped by project and status
+   ============================================================ */
+function requirementsHtml() {
+  const scopes = state.reqScope === 'all' ? PROJECTS : [currentProject()];
+  const scopedReqs = requirements.filter(req => scopes.some(project => project.id === req.projectId));
+  const statuses = state.reqStatus === 'all' ? REQUIREMENT_STATUSES : [state.reqStatus];
+  const visible = scopedReqs.filter(req => state.reqStatus === 'all' || req.status === state.reqStatus);
+  return `
+    ${pageHead('REQUIREMENTS · 承诺容器', `需求 <span class="title-count">${visible.length} 条</span>`,
+      '按项目归档，再按状态推进。展开一条需求，看到它拆出的任务与每个任务的最新尝试。',
+      `<button class="btn" data-action="new-requirement">${icon('plus', 12)} 新建需求</button>`)}
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="需求范围">
+        <button data-action="req-scope" data-scope="current" aria-pressed="${state.reqScope === 'current'}">当前项目</button>
+        <button data-action="req-scope" data-scope="all" aria-pressed="${state.reqScope === 'all'}">全部项目</button>
+      </div>
+      <div class="pill-row">
+        <button class="status-filter" data-action="req-status" data-status="all" aria-pressed="${state.reqStatus === 'all'}">全部 <span class="n">${scopedReqs.length}</span></button>
+        ${REQUIREMENT_STATUSES.map(status => `<button class="status-filter" data-action="req-status" data-status="${status}" aria-pressed="${state.reqStatus === status}">
+          <span class="dot ${REQ_DOT[status]}"></span>${status} <span class="n">${scopedReqs.filter(req => req.status === status).length}</span>
+        </button>`).join('')}
+      </div>
+      <span class="spacer"></span>
+      <span class="toolbar-note">${icon('folder', 10)} ${state.reqScope === 'all' ? '2 个项目' : esc(currentProject().shortCode)}</span>
+    </div>
+    ${scopes.map(project => requirementsProjectHtml(project, statuses)).join('')}`;
+}
+
+function requirementsProjectHtml(project, statuses) {
+  const reqs = requirements.filter(req => req.projectId === project.id);
+  return `
+    <section class="req-project">
+      <div class="req-project-head">
+        <span class="pcode">${esc(project.shortCode)}</span>
+        <h2>${esc(project.name)}</h2>
+        <span class="sts"><span class="dot green"></span>${esc(project.status)}</span>
+        <span class="tag soft">${esc(project.sensitivity)}</span>
+        <span class="meta">${reqs.length} 个需求 <span class="ctx-sep"></span> ${reqs.filter(req => req.status !== '已关闭').length} 个未关闭</span>
+      </div>
+      ${statuses.map(status => {
+        const list = reqs.filter(req => req.status === status);
+        return `<div class="req-group">
+          <div class="req-group-head">
+            <span class="dot ${REQ_DOT[status]}"></span>
+            <h3>${status}</h3><span class="n">${list.length}</span>
+            <span class="hint">${REQ_HINT[status]}</span>
+          </div>
+          ${list.length ? list.map(req => requirementRowHtml(req)).join('') : `<p class="req-empty">这个状态下没有需求。</p>`}
+        </div>`;
+      }).join('')}
+    </section>`;
+}
+
+function requirementRowHtml(req) {
+  const open = state.expandedReq === req.id;
+  const ts = tasksOfReq(req.id);
+  const quick = req.status === '待确认'
+    ? `<button class="row-act primary" data-action="confirm-req" data-id="${req.id}">确认</button>`
+    : req.status === '已确认'
+      ? `<button class="row-act" data-action="split-req" data-id="${req.id}">拆任务</button>`
+      : '';
+  return `<div class="req-row ${open ? 'open' : ''}" data-action="toggle-req" data-id="${req.id}" data-req-id="${req.id}">
+    <span class="req-chev">${icon('chevRight', 11)}</span>
+    <div class="req-main">
+      <div class="req-title-line">
+        <span class="req-seq">#${req.seqNo}</span>
+        <button type="button" class="req-title" data-action="toggle-req" data-id="${req.id}" aria-expanded="${open}">${esc(req.title)}</button>
+        ${priorityTag(req.priority)}
+        <span class="req-time">${createdLabel(req.createdAt)}</span>
+      </div>
+      <div class="req-meta">
+        <span class="source">${icon(sourceIcon(req.sourceNote), 9)} ${esc(sourceShort(req.sourceNote))}</span>
+        <span>·</span>
+        <span>${ts.length} 个任务</span>
+        <span>·</span>
+        <span>更新 ${timeAgo(req.updatedAt)}</span>
+      </div>
+    </div>
+    <div class="req-side">
+      ${ts.length ? `<span class="mini-pips" title="${esc(ts.map(task => task.status).join(' / '))}">${ts.slice(0, 6).map(task => `<span class="dot ${TASK_DOT[task.status]}"></span>`).join('')}</span>
+        <span class="req-side-note">${taskSignal(ts)}</span>` : `<span class="req-side-note">还未拆任务</span>`}
+      ${quick}
+    </div>
+  </div>
+  ${open ? requirementExpandHtml(req, ts) : ''}`;
+}
+
+function requirementExpandHtml(req, ts) {
+  return `<div class="req-expand">
+    <div class="req-expand-top">
+      <blockquote class="req-note">
+        <b>来源 · ${esc(sourceShort(req.sourceNote))}</b>
+        ${esc(req.sourceNote || '手动记录')}
+        ${req.description ? `<p class="req-desc">${esc(req.description)}</p>` : ''}
+      </blockquote>
+      <div class="req-actions">
+        ${req.status === '待确认' ? `<button class="btn primary sm" data-action="confirm-req" data-id="${req.id}">${icon('check', 11)} 确认需求</button>` : ''}
+        ${req.status !== '已关闭' ? `<button class="btn ${req.status === '已确认' ? 'primary' : ''} sm" data-action="split-req" data-id="${req.id}">${icon('split', 11)} 拆任务</button>` : ''}
+        <button class="btn ghost sm" data-action="open-req-timeline" data-id="${req.id}">在时间线中查看</button>
+      </div>
+    </div>
+    <div class="req-tasks">
+      <div class="req-tasks-head">
+        <span class="dot ${req.status === '已关闭' ? 'gray' : 'green'}"></span>
+        <h4>任务</h4><span class="n">${ts.length}</span>
+        <span class="hint">最新尝试在这里展开，详情里看完整时间线</span>
+      </div>
+      ${ts.length ? ts.map(task => miniTaskHtml(task)).join('') : `<div class="req-task-empty">还没有任务。拆任务后，任务与它们的尝试会出现在这里。</div>`}
+    </div>
+  </div>`;
+}
+
+function miniTaskHtml(task) {
+  const attempt = latestAttempt(task);
+  return `<div class="mini-task" data-action="open-task" data-id="${task.id}" role="button" tabindex="0">
+    <span class="dot ${TASK_DOT[task.status]}"></span>
+    <span class="mini-title">${esc(task.title)}</span>
+    <span class="tag type">${esc(task.type)}</span>
+    ${priorityTag(task.priority)}
+    <span class="mini-attempt">${attempt ? `${icon('play', 9)} ${shortAttempt(attempt)} · ${esc(attempt.status)} · ${esc(attempt.stage)} · ${timeAgo(attempt.lastReportAt || attempt.createdAt)}` : '未派发'}</span>
+    <span class="mini-open">打开 ${icon('arrow', 9)}</span>
+  </div>`;
+}
+function shortAttempt(attempt) { return attempt.id; }
+
+/* ============================================================
+   10 · tasks
+   ============================================================ */
+function tasksHtml() {
+  const project = currentProject();
+  const all = tasks.filter(task => task.projectId === project.id);
+  const list = state.taskFilter === 'all' ? all : all.filter(task => task.status === state.taskFilter);
+  return `
+    ${pageHead('TASKS · 需求之下', `任务 <span class="title-count">${list.length} 个</span>`,
+      '任务是需求的切片；状态、阻塞与最新尝试一眼可见，完整执行记录只在详情里展开。',
+      `<span class="toolbar-note">${icon('folder', 10)} 当前项目 · ${esc(project.name)}</span>`)}
+    <div class="toolbar">
+      <div class="pill-row">
+        <button class="status-filter" data-action="task-filter" data-status="all" aria-pressed="${state.taskFilter === 'all'}">全部 <span class="n">${all.length}</span></button>
+        ${TASK_STATUSES.map(status => `<button class="status-filter" data-action="task-filter" data-status="${status}" aria-pressed="${state.taskFilter === status}">
+          <span class="dot ${TASK_DOT[status]}"></span>${status} <span class="n">${all.filter(task => task.status === status).length}</span>
+        </button>`).join('')}
+      </div>
+      <span class="spacer"></span>
+      <span class="toolbar-note">${icon('split', 10)} 任务来自需求的拆分</span>
+    </div>
+    <div class="task-table">
+      <div class="task-thead">
+        <span>任务 / 所属需求</span><span class="col-type">类型</span><span class="col-prio">优先级</span><span class="col-attempt">最新尝试</span><span>更新</span><span></span>
+      </div>
+      ${list.length ? list.map(task => taskRowHtml(task)).join('') : `<div class="empty">这个状态下没有任务。<br>切换筛选，或到需求里拆出新的任务。</div>`}
+    </div>`;
+}
+
+function taskRowHtml(task) {
+  const attempt = latestAttempt(task);
+  const req = reqOf(task);
+  const project = projectOf(task.projectId);
+  return `<button class="task-row" data-action="open-task" data-id="${task.id}">
+    <span class="task-row-main">
+      <span class="dot ${TASK_DOT[task.status]}"></span>
+      <span style="min-width:0">
+        <span class="task-row-title">${esc(task.title)}</span>
+        <span class="task-row-sub">
+          <span>${esc(project.shortCode)} · #${req ? req.seqNo : '—'} ${esc(req ? req.title : '')}</span>
+          ${task.attention ? `<span class="sts red">${icon('alert', 9)} ${esc(task.attention)}</span>` : ''}
+        </span>
+      </span>
+    </span>
+    <span class="col-type"><span class="tag type">${esc(task.type)}</span></span>
+    <span class="col-prio">${priorityTag(task.priority)}</span>
+    <span class="task-attempt col-attempt">
+      <span class="att-line"><span class="dot ${attempt ? ATTEMPT_DOT[attempt.status] : 'gray'}"></span>${attempt ? esc(attempt.stage) : '未派发'}<span class="sts">${attempt ? esc(attempt.status) : ''}</span></span>
+      <span class="att-sub">${attempt ? `${shortAttempt(attempt)} · ${timeAgo(attempt.lastReportAt || attempt.createdAt)}` : '等待派发'}</span>
+    </span>
+    <span class="task-updated">${timeAgo(task.updatedAt)}</span>
+    <span class="task-arrow">${icon('arrow', 12)}</span>
+  </button>`;
+}
+
+/* ============================================================
+   11 · inbox
+   ============================================================ */
+function inboxHtml() {
+  const open = inboxOpen();
+  return `
+    ${pageHead('INBOX · 入口', `收件箱 <span class="title-count">${open.length} 条未处理</span>`,
+      '收件不是需求。先保留原话，再决定它落到哪个项目、成为哪条承诺。')}
+    <div class="inbox-layout">
+      <div class="inbox-list">
+        ${open.length ? open.map(item => inboxItemHtml(item)).join('') : `<div class="empty">收件箱清空了。新的企微、邮件或电话记录会先落在这里。</div>`}
+      </div>
+      <aside class="aside-card">
+        <h3>分诊原则</h3>
+        <p>一条收件进入工作流之前，只做三件事。</p>
+        <ul class="principle-list">
+          <li><span class="step-n">01</span><span><b>保留原话。</b>不急着改写，引用是后续确认需求的依据。</span></li>
+          <li><span class="step-n">02</span><span><b>落到项目。</b>项目是第一层上下文，跨项目混在一起会让承诺失焦。</span></li>
+          <li><span class="step-n">03</span><span><b>转成可确认的需求。</b>标题一句话，来源留在旁边，剩下的交给拆任务。</span></li>
+        </ul>
+        <hr class="now-rule">
+        <p style="margin-top:9px">${icon('clock', 10)} 原型时钟固定在 14:32，时间为模拟值。</p>
+      </aside>
+    </div>`;
+}
+
+function inboxItemHtml(item) {
+  const project = projectOf(item.projectId);
+  const channelIco = item.channel === '邮箱' ? 'doc' : item.channel === '电话' ? 'clock' : 'inbox';
+  return `<article class="inbox-item" data-inbox-id="${item.id}">
+    <div class="inbox-head">
+      <span class="channel">${esc(item.channel)}</span>
+      <span class="inbox-contact">${esc(item.contact || '未留联系人')}</span>
+      <span class="inbox-proj">· ${esc(project.shortCode)}</span>
+      <span class="inbox-time">${createdLabel(item.receivedAt)} · ${timeAgo(item.receivedAt)}</span>
+    </div>
+    <p class="inbox-text">「${esc(item.rawContext)}」</p>
+    <div class="inbox-foot">
+      <span class="inbox-proj">${icon(channelIco, 10)} ${item.externalRef ? esc(item.externalRef) : '无外部引用'}</span>
+      <div class="inbox-actions">
+        <button class="btn sm" data-action="inbox-ignore" data-id="${item.id}">忽略</button>
+        <button class="btn primary sm" data-action="inbox-triage" data-id="${item.id}">${icon('split', 10)} 转需求</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ============================================================
+   12 · memory
+   ============================================================ */
+function memoryHtml() {
+  const project = currentProject();
+  const all = memories.filter(memory => memory.projectId === project.id);
+  const list = state.memoryFilter === 'all' ? all : all.filter(memory => memory.status === state.memoryFilter);
+  const actionable = all.filter(memory => memory.status === '待复核' || memory.status === '草稿').length;
+  return `
+    ${pageHead('MEMORY · 长期上下文', `记忆 <span class="title-count">${list.length} 条</span>`,
+      '只把经过确认的事实留在项目里；草稿与待复核的记忆不会直接进入执行上下文。')}
+    <div class="toolbar">
+      <div class="pill-row">
+        <button class="status-filter" data-action="memory-filter" data-status="all" aria-pressed="${state.memoryFilter === 'all'}">全部 <span class="n">${all.length}</span></button>
+        ${['待复核', '已确认', '草稿', '已废弃'].map(status => `<button class="status-filter" data-action="memory-filter" data-status="${status}" aria-pressed="${state.memoryFilter === status}">
+          <span class="dot ${MEMORY_DOT[status]}"></span>${status} <span class="n">${all.filter(memory => memory.status === status).length}</span>
+        </button>`).join('')}
+      </div>
+      <span class="spacer"></span>
+      <span class="toolbar-note">${actionable} 条等你复核 · ${esc(project.shortCode)}</span>
+    </div>
+    ${list.length ? `<div class="mem-grid">${list.map(memory => memoryCardHtml(memory)).join('')}</div>`
+      : `<div class="empty">这个状态下没有记忆。记忆来自任务结论、会话与人工交接。</div>`}`;
+}
+
+function memoryCardHtml(memory) {
+  const project = projectOf(memory.projectId);
+  const actionable = memory.status === '待复核' || memory.status === '草稿';
+  return `<article class="memory" data-memory-id="${memory.id}">
+    <div class="memory-head">
+      <span class="tag soft">${esc(memory.type)}</span>
+      <span class="sts"><span class="dot ${MEMORY_DOT[memory.status]}"></span>${esc(memory.status)}</span>
+      <span class="memory-meta" style="margin-left:auto">${esc(project.shortCode)}</span>
+    </div>
+    <h3 class="memory-title">${esc(memory.title)}</h3>
+    <p class="memory-text">${esc(memory.content)}</p>
+    <div class="memory-meta">
+      <span>来源 ${esc(memory.sourceType)}${memory.sourceRef ? ` · ${esc(memory.sourceRef)}` : ''}</span>
+      <span>·</span>
+      <span>更新 ${timeAgo(memory.updatedAt)}</span>
+    </div>
+    <div class="tags">${memory.tags.map(tag => `<span class="tag-mini">${esc(tag)}</span>`).join('')}</div>
+    <div class="memory-foot">
+      <span class="memory-meta">${actionable ? '确认后进入项目上下文' : memory.status === '已确认' ? '已在项目上下文中' : '已归档'}</span>
+      <span class="spacer"></span>
+      ${actionable ? `<button class="btn ghost sm" data-action="memory-decision" data-id="${memory.id}" data-decision="退回">退回</button>
+        <button class="btn sm" data-action="memory-decision" data-id="${memory.id}" data-decision="确认">${icon('check', 10)} 确认</button>` : ''}
+    </div>
+  </article>`;
+}
+
+/* ============================================================
+   13 · reviews
+   ============================================================ */
+function reviewsHtml() {
+  const project = currentProject();
+  const pending = tasks.filter(task => task.projectId === project.id && task.status === '评审');
+  const history = reviews
+    .filter(review => {
+      const task = byId(tasks, review.taskId);
+      return task && task.projectId === project.id;
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return `
+    ${pageHead('REVIEWS · 人的判断', `评审 <span class="title-count">${pending.length} 待评审</span>`,
+      '执行可以自动化，判断不能。评审结论会进入任务时间线，并决定它转向验收还是继续执行。')}
+    ${pending.length ? `<section class="review-section">
+      <div class="section-head"><h2>待你评审</h2><span class="n">${pending.length}</span><span class="hint">点开后可直接给出结论</span></div>
+      ${pending.map(task => {
+        const attempt = latestAttempt(task);
+        const req = reqOf(task);
+        return `<button class="pending-review" data-action="open-task" data-id="${task.id}">
+          <span class="dot amber ring-amber"></span>
+          <span class="pr-main">
+            <span class="pr-title">${esc(task.title)}</span>
+            <span class="pr-meta"><span>${esc(req ? `需求 #${req.seqNo} · ${req.title}` : '')}</span><span>·</span><span>${attempt ? `${shortAttempt(attempt)} · ${esc(attempt.stage)}` : '等待评审'}</span><span>·</span><span>${timeAgo(task.updatedAt)}</span></span>
+          </span>
+          <span class="btn sm">开始评审 ${icon('arrow', 10)}</span>
+        </button>`;
+      }).join('')}
+    </section>` : `<section class="review-section"><div class="section-head"><h2>待你评审</h2></div><div class="empty" style="padding:24px;background:#fff;border:1px solid var(--line);border-radius:11px">当前项目没有待评审的任务。</div></section>`}
+    <section class="review-section">
+      <div class="section-head"><h2>评审记录</h2><span class="n">${history.length}</span><span class="hint">当前项目 · 近 30 天</span></div>
+      <div class="review-list">
+        ${history.length ? history.map(review => {
+          const task = byId(tasks, review.taskId);
+          const req = task ? reqOf(task) : null;
+          return `<div class="review-item">
+            <div class="review-top">
+              <span class="dot ${review.decision === '通过' ? 'green' : 'red'}"></span>
+              <button class="review-task" style="border:0;background:none;padding:0;text-align:left" data-action="open-task" data-id="${review.taskId}">${esc(task ? task.title : review.taskId)}</button>
+              <span class="tag ${review.decision === '通过' ? 'soft' : 'soft'}">${esc(review.decision)}</span>
+              <span class="review-meta" style="margin-left:auto">${review.reviewer || '未署名'} · ${createdLabel(review.createdAt)}</span>
+            </div>
+            ${review.comments ? `<p class="review-comment">「${esc(review.comments)}」</p>` : ''}
+            <div class="review-meta">
+              <span>${esc(req ? `#${req.seqNo} ${req.title}` : '')}</span>
+              <span>·</span>
+              <span>${timeAgo(review.createdAt)}</span>
+            </div>
+          </div>`;
+        }).join('') : `<div class="empty">还没有评审记录。</div>`}
+      </div>
+    </section>`;
+}
+
+/* ============================================================
+   14 · overlays: task detail, composer, delete confirmation
+   ============================================================ */
+function renderOverlays() {
+  let html = '';
+  if (state.detailTaskId) {
+    const task = byId(tasks, state.detailTaskId);
+    if (task) html += taskSheetHtml(task);
+    else state.detailTaskId = null;
+  }
+  if (state.composer) html += composerHtml();
+  if (state.deleteTaskId) html += deleteModalHtml();
+
+  $('#overlayRoot').innerHTML = html;
+  const locked = !!(state.detailTaskId || state.composer || state.deleteTaskId);
+  const scrollEl = $('#scroll');
+  if (scrollEl) scrollEl.style.overflow = locked ? 'hidden' : '';
+}
+
+function taskSheetHtml(task) {
+  const req = reqOf(task);
+  const project = projectOf(task.projectId);
+  const attempt = latestAttempt(task);
+  const entryCount = taskTimelineEntries(task).length;
+  return `
+    <div class="overlay" role="presentation">
+      <div class="overlay-mask" data-action="close-sheet"></div>
+      <section class="sheet detail-sheet" role="dialog" aria-modal="true" aria-labelledby="taskSheetTitle">
+        <header class="detail-head">
+          <div class="detail-crumb">
+            <span class="pcode">${esc(project.shortCode)}</span><span>·</span>
+            <span>#${req ? req.seqNo : '—'} ${esc(req ? req.title : '未关联需求')}</span>
+            <span>·</span><span>任务</span>
+          </div>
+          <div class="detail-title-row">
+            <h2 id="taskSheetTitle">${esc(task.title)}</h2>
+            <button class="icon-btn" type="button" data-action="close-sheet" aria-label="关闭任务详情">${icon('close', 15)}</button>
+          </div>
+          <div class="detail-meta">
+            ${priorityTag(task.priority)}
+            <span class="tag type">${esc(task.type)}</span>
+            <span class="sts"><span class="dot ${TASK_DOT[task.status]}"></span>${esc(task.status)}</span>
+            ${attempt ? `<span class="attempt-chip">${shortAttempt(attempt)}</span><span>${esc(attempt.workerSessionId)}</span><span>·</span><span>${esc(attempt.stage)}</span>` : '<span>未派发</span>'}
+            <span>·</span><span>更新 ${timeAgo(task.updatedAt)}</span>
+          </div>
+          <div class="detail-actions">
+            <button class="btn ghost sm" type="button" data-action="open-req" data-id="${req ? req.id : ''}">${icon('flow', 11)} 在需求中查看</button>
+            <span class="spacer"></span>
+            <button class="text-danger" type="button" data-action="ask-delete" data-id="${task.id}">${icon('trash', 10)} 删除任务</button>
+          </div>
+        </header>
+        <div class="detail-body">
+          ${taskActionCardHtml(task)}
+          <div class="detail-grid">
+            <div class="info-card">
+              <div class="info-label">${icon('check', 10)} 验收标准</div>
+              <p>${esc(task.acceptance || '未填写验收标准。')}</p>
+            </div>
+            <div class="info-card">
+              <div class="info-label">${icon('flow', 10)} 所属需求</div>
+              <p>#${req ? req.seqNo : '—'} ${esc(req ? req.title : '')}</p>
+              <div class="sub"><span class="dot ${req ? REQ_DOT[req.status] : 'gray'}"></span>${req ? esc(req.status) : '—'}${req && req.priority ? ` · ${esc(req.priority)}` : ''}</div>
+            </div>
+            ${task.spec ? `<div class="info-card full">
+              <div class="info-label">${icon('doc', 10)} 规格 · 已批准</div>
+              <p>${esc(task.spec)}</p>
+            </div>` : ''}
+          </div>
+          <div class="timeline-title">
+            <h3>执行时间线</h3><span class="n">${entryCount} 条</span><span class="line"></span><span class="n">尝试 / 证据 / 评审 · 最新在上</span>
+          </div>
+          ${taskTimelineHtml(task)}
+          <div class="danger-zone">
+            <span>删除后任务会从列表与统计中消失；运行记录、证据与审计保留。</span>
+            <button class="text-danger" type="button" data-action="ask-delete" data-id="${task.id}">删除任务</button>
+          </div>
+        </div>
+      </section>
+    </div>`;
+}
+
+function taskActionCardHtml(task) {
+  if (task.status === '评审') {
+    return `<div class="action-card review">
+      <h3><span class="dot amber ring-amber"></span>等你评审</h3>
+      <p class="hint">通过后任务转入待验收；退回会回到进行中，并记录你的意见。</p>
+      <textarea id="reviewComment" class="review-input" rows="2" placeholder="评审意见（可选）：关注点、风险或补充要求"></textarea>
+      <div class="review-actions">
+        <span class="hint">结论会写入任务时间线</span>
+        <span class="spacer"></span>
+        <button class="btn sm" type="button" data-action="review-submit" data-id="${task.id}" data-decision="退回">退回</button>
+        <button class="btn sm review-pass" type="button" data-action="review-submit" data-id="${task.id}" data-decision="通过">通过并转待验收</button>
+      </div>
+    </div>`;
+  }
+  if (task.status === '待验收') {
+    return `<div class="action-card accept">
+      <h3><span class="dot amber ring-amber"></span>等待你验收</h3>
+      <p class="hint">${esc(task.acceptance || '验收标准未填写；建议补全后再验收。')}</p>
+      <div class="review-actions">
+        <span class="hint">验收后任务关闭，证据保留</span>
+        <span class="spacer"></span>
+        <button class="btn sm primary" type="button" data-action="accept-task" data-id="${task.id}">${icon('check', 11)} 验收通过</button>
+      </div>
+    </div>`;
+  }
+  if (task.status === '阻塞') {
+    return `<div class="action-card blocked">
+      <h3><span class="dot red ring-red"></span>阻塞 · ${esc(task.attention || '需要处理')}</h3>
+      <p class="hint">执行尝试已停下，没有产生新的写入。解除外部条件后可重新派发；历史尝试仍会保留。</p>
+      <div class="review-actions">
+        <span class="hint">等待 ${waitingFor(task.updatedAt)}</span>
+        <span class="spacer"></span>
+        <button class="btn sm" type="button" data-action="retry-task" data-id="${task.id}">${icon('refresh', 11)} 重试派发</button>
+      </div>
+    </div>`;
+  }
+  if (task.status === '就绪') {
+    return `<div class="action-card ready">
+      <h3><span class="dot gray"></span>就绪 · 等待派发</h3>
+      <p class="hint">任务已经拆出，但还没有执行尝试。派发后执行器会接管；自动派发可以在项目设置里开启。</p>
+      <div class="review-actions">
+        <span class="hint">${esc(task.acceptance || '')}</span>
+        <span class="spacer"></span>
+        <button class="btn sm primary" type="button" data-action="dispatch-task" data-id="${task.id}">${icon('play', 11)} 派发</button>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function taskTimelineEntries(task) {
+  const entries = [];
+  const req = reqOf(task);
+  entries.push({
+    at: task.createdAt, kind: 'created', label: '任务创建', actor: '你',
+    text: `由需求 #${req ? req.seqNo : '—'} 拆出 · ${task.type} · ${task.priority}`,
+    tone: 'ink',
+  });
+  attemptsOfTask(task.id).forEach(attempt => {
+    entries.push({
+      at: attempt.createdAt, kind: 'attempt', label: '尝试开始', actor: '小雄 · 执行器',
+      attemptId: attempt.id, text: `${attempt.stage} · 会话 ${attempt.workerSessionId}`, tone: 'blue',
+    });
+    (attempt.reports || []).forEach(report => {
+      entries.push({
+        at: report.at, kind: 'report', label: '报告', actor: '小雄 · 执行器',
+        attemptId: attempt.id, text: report.text, tone: report.tone === 'red' ? 'red' : 'green',
+      });
+    });
+    artifacts.filter(artifact => artifact.attemptId === attempt.id).forEach(artifact => {
+      entries.push({
+        at: artifact.createdAt, kind: 'evidence', label: `证据 · ${artifact.type}`,
+        attemptId: attempt.id, artifact, tone: 'green',
+      });
+    });
+    if (attempt.endedAt) {
+      entries.push({
+        at: attempt.endedAt, kind: 'attempt-end', label: '尝试结束', attemptId: attempt.id,
+        actor: '系统', text: `状态 ${attempt.status} · 阶段 ${attempt.stage}`,
+        tone: ATTEMPT_DOT[attempt.status] === 'green' ? 'green' : ATTEMPT_DOT[attempt.status] === 'red' ? 'red' : 'gray',
+      });
+    } else if (attempt.status === '阻塞') {
+      entries.push({
+        at: attempt.lastReportAt || attempt.createdAt, kind: 'attempt-block', label: '尝试阻塞',
+        attemptId: attempt.id, actor: '系统', text: task.attention || `阶段 ${attempt.stage}`,
+        tone: 'red',
+      });
+    }
+  });
+  reviews.filter(review => review.taskId === task.id).forEach(review => {
+    entries.push({
+      at: review.createdAt, kind: 'review', label: `评审${review.decision}`,
+      actor: review.reviewer || '未署名', text: review.comments || '评审结论已记录。',
+      tone: review.decision === '通过' ? 'green' : 'red',
+    });
+  });
+  if (task.acceptedAt) {
+    entries.push({
+      at: task.acceptedAt, kind: 'accept', label: '验收通过', actor: task.acceptedBy || '你',
+      text: '任务关闭；运行记录、证据与审计保留。', tone: 'green',
+    });
+  }
+  return entries.sort((a, b) => b.at.localeCompare(a.at) || b.kind.localeCompare(a.kind));
+}
+
+function taskTimelineHtml(task) {
+  const entries = taskTimelineEntries(task);
+  let html = '';
+  let lastDate = '';
+  entries.forEach(entry => {
+    const date = entry.at.slice(0, 10);
+    if (date !== lastDate) {
+      const meta = dayMeta(date);
+      html += `<div class="tl-day ${meta.today ? 'today' : ''}">${meta.label}${meta.sub ? ` · ${meta.sub}` : ''}</div>`;
+      lastDate = date;
+    }
+    const artifact = entry.artifact;
+    html += `<div class="tl-entry">
+      <span class="tl-time">${entry.at.slice(11, 16)}</span>
+      <span class="tl-rail"><span class="tl-dot ${entry.tone || 'gray'}"></span></span>
+      <div class="tl-main">
+        <div class="tl-kicker">
+          <b>${esc(entry.label)}</b>
+          ${entry.actor ? `<span>${esc(entry.actor)}</span>` : ''}
+          ${entry.attemptId ? `<span class="attempt-chip">${shortAttempt({ id: entry.attemptId })}</span>` : ''}
+        </div>
+        ${artifact ? `<div class="evidence">
+          ${icon('doc', 11)}
+          <div>
+            <div class="ev-title2">${esc(artifact.title)}</div>
+            <div class="ev-sub">${esc(artifact.uri || '')}${artifact.content ? ` · ${esc(artifact.content)}` : ''}</div>
+          </div>
+        </div>` : `<p class="tl-text">${esc(entry.text || '')}</p>`}
+      </div>
+    </div>`;
+  });
+  return `<div class="task-timeline">${html}</div>`;
+}
+
+/* ---------- composer ---------- */
+function composerHtml() {
+  return state.composer && state.composer.mode === 'split' ? splitComposerHtml() : requirementComposerHtml();
+}
+
+function segControl(field, values, selected, extraClass = '') {
+  return `<div class="seg-control ${extraClass}" role="group">${values.map(value =>
+    `<button type="button" data-action="pick" data-field="${field}" data-value="${value}" aria-pressed="${value === selected}">${value}</button>`
+  ).join('')}</div><input type="hidden" name="${field}" value="${esc(selected)}">`;
+}
+
+function requirementComposerHtml() {
+  const composer = state.composer || { mode: 'create' };
+  const isTriage = composer.mode === 'triage';
+  const item = isTriage && composer.inboxId ? byId(inbox, composer.inboxId) : null;
+  const defaultProject = item ? item.projectId : currentProject().id;
+  const rawTitle = item ? (item.rawContext.split(/[。！？\n]/)[0] || item.rawContext) : '';
+  const defaultTitle = rawTitle.length > 42 ? `${rawTitle.slice(0, 42)}…` : rawTitle;
+  const defaultNote = item ? item.rawContext : '';
+  return `
+    <div class="overlay" role="presentation">
+      <div class="overlay-mask" data-action="close-overlay"></div>
+      <form class="sheet" data-form="composer" data-mode="${isTriage ? 'triage' : 'create'}" role="dialog" aria-modal="true" aria-labelledby="composerTitleHeading">
+        <header class="sheet-head">
+          <div>
+            <div class="eyebrow">${isTriage ? 'TRIAGE · 收件转需求' : 'NEW REQUIREMENT · 新承诺'}</div>
+            <h2 id="composerTitleHeading">${isTriage ? '收件转需求' : '新建需求'}</h2>
+          </div>
+          <button class="icon-btn" type="button" data-action="close-overlay" aria-label="关闭">${icon('close', 15)}</button>
+        </header>
+        <div class="sheet-body">
+          ${item ? `<div class="source-card">
+            <div class="src-label">${icon('inbox', 10)} 来自收件箱 · ${esc(item.channel)} · ${esc(item.contact || '未留联系人')}</div>
+            <p>「${esc(item.rawContext)}」</p>
+          </div>` : ''}
+          <div class="field">
+            <label for="composerProject">项目</label>
+            <select id="composerProject" class="select" name="projectId">
+              ${PROJECTS.map(project => `<option value="${project.id}" ${project.id === defaultProject ? 'selected' : ''}>${esc(project.shortCode)} · ${esc(project.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label for="composerTitle">需求标题 <span class="req">*</span></label>
+            <input id="composerTitle" class="input" name="title" value="${esc(defaultTitle)}" placeholder="一句话说明要解决的问题" data-autofocus autocomplete="off">
+          </div>
+          <div class="field">
+            <span class="field-label">优先级</span>
+            ${segControl('priority', PRIORITIES, 'P2', 'prio')}
+          </div>
+          <div class="field">
+            <label for="composerNote">来源 / 背景 <span class="note">可选</span></label>
+            <textarea id="composerNote" class="textarea" name="note" rows="3" placeholder="来源、客户原话或背景；创建后会保留在需求里">${esc(defaultNote)}</textarea>
+          </div>
+          <label class="check"><input type="checkbox" name="continueSplit" value="1"> 创建后继续拆任务</label>
+          <input type="hidden" name="inboxId" value="${item ? esc(item.id) : ''}">
+          <p class="form-error" id="composerError"></p>
+        </div>
+        <footer class="sheet-foot">
+          <span class="hint">会以「待确认」状态进入需求列表，来源原话一并保留。</span>
+          <button class="btn" type="button" data-action="close-overlay">取消</button>
+          <button class="btn primary" type="submit" data-submit="composer" ${defaultTitle.trim() ? '' : 'disabled'}>创建需求</button>
+        </footer>
+      </form>
+    </div>`;
+}
+
+function splitComposerHtml() {
+  const composer = state.composer || {};
+  const req = composer.reqId ? byId(requirements, composer.reqId) : null;
+  if (!req) return '';
+  const ts = tasksOfReq(req.id);
+  return `
+    <div class="overlay" role="presentation">
+      <div class="overlay-mask" data-action="close-overlay"></div>
+      <form class="sheet" data-form="split" data-req="${req.id}" role="dialog" aria-modal="true" aria-labelledby="splitHeading">
+        <header class="sheet-head">
+          <div>
+            <div class="eyebrow">SPLIT · 承诺变成任务</div>
+            <h2 id="splitHeading">拆任务</h2>
+          </div>
+          <button class="icon-btn" type="button" data-action="close-overlay" aria-label="关闭">${icon('close', 15)}</button>
+        </header>
+        <div class="sheet-body">
+          <div class="ctx-req">
+            <span class="seq">#${req.seqNo}</span>
+            <div>
+              <h3>${esc(req.title)}</h3>
+              <p>${esc(projectOf(req.projectId).shortCode)} · 当前 ${ts.length} 个任务 · ${esc(req.status)}</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="splitTitles">任务标题 <span class="req">每行一个</span></label>
+            <textarea id="splitTitles" class="textarea" name="titles" rows="6" placeholder="例如：&#10;导出接口支持 month 参数&#10;前端增加月份选择器&#10;补充跨月导出的回归用例" data-autofocus></textarea>
+            <span class="note">行内的逗号、句号不会拆开任务；一行就是一条可验收的任务。</span>
+          </div>
+          <div class="field-row" style="margin-bottom:14px">
+            <div class="field">
+              <span class="field-label">任务类型</span>
+              ${segControl('taskType', TASK_TYPES, '开发')}
+            </div>
+            <div class="field">
+              <span class="field-label">优先级</span>
+              ${segControl('priority', PRIORITIES, req.priority || 'P2', 'prio')}
+            </div>
+          </div>
+          <div class="field">
+            <label for="splitAcceptance">验收标准 <span class="note">可选，应用到全部任务</span></label>
+            <input id="splitAcceptance" class="input" name="acceptance" placeholder="拆出的任务共享、也可之后单独修改">
+          </div>
+          <div class="split-preview" id="splitPreview">
+            ${splitPreviewContent([])}
+          </div>
+          <p class="form-error" id="splitError"></p>
+        </div>
+        <footer class="sheet-foot">
+          <span class="hint">拆出后需求变为「已拆分」；任务会进入就绪状态。</span>
+          <button class="btn" type="button" data-action="close-overlay">取消</button>
+          <button class="btn primary" type="submit" id="splitSubmit" disabled>拆出任务</button>
+        </footer>
+      </form>
+    </div>`;
+}
+
+function splitPreviewContent(titles) {
+  if (!titles.length) {
+    return `<div class="split-preview-head">${icon('split', 10)} 预览 <span class="split-preview-count">0 个任务</span></div>
+      <p class="split-empty">每行一个任务；输入后这里会实时预览。拆出的任务会立即出现在需求下。</p>`;
+  }
+  const prose = titles.length > 1 && titles.some(title => /^(以及|并且|并|和|与|或|及)/.test(title) || /[。！？]$/.test(title));
+  return `<div class="split-preview-head">${icon('split', 10)} 预览 <span class="split-preview-count">${titles.length} 个任务</span></div>
+    ${titles.map((title, index) => `<div class="split-item"><span class="n">${pad2(index + 1)}</span><span class="t">${esc(title)}</span></div>`).join('')}
+    ${prose ? `<p class="warn-line">${icon('alert', 10)} 有些行看起来像一段话被拆开了；如果本意是一个任务，请写在一行内。</p>` : ''}
+    ${titles.length > 8 ? `<p class="warn-line">${icon('alert', 10)} 一次拆太多会难以验收，建议控制在 6 个以内。</p>` : ''}`;
+}
+
+function updateSplitForm() {
+  const textarea = $('#splitTitles');
+  if (!textarea) return;
+  const titles = textarea.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const box = $('#splitPreview');
+  if (box) box.innerHTML = splitPreviewContent(titles);
+  const submit = $('#splitSubmit');
+  if (submit) {
+    submit.disabled = !titles.length;
+    submit.innerHTML = titles.length ? `${icon('split', 11)} 拆出 ${titles.length} 个任务` : '拆出任务';
+  }
+}
+
+/* ---------- delete confirmation ---------- */
+function deleteModalHtml() {
+  const task = byId(tasks, state.deleteTaskId);
+  if (!task) return '';
+  return `<div class="overlay modal-layer" role="presentation">
+    <div class="overlay-mask" data-action="cancel-delete"></div>
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <div class="modal-icon">${icon('alert', 15)}</div>
+      <h2 id="deleteTitle">删除这个任务？</h2>
+      <p>「<span class="modal-task">${esc(task.title)}</span>」会从列表与统计中消失；运行记录、证据与审计仍会保留。</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" data-action="cancel-delete">取消</button>
+        <button class="btn danger" type="button" data-action="confirm-delete">${icon('trash', 11)} 删除任务</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   15 · navigation helpers
+   ============================================================ */
+function goTab(tab) {
+  state.tab = tab;
+  if (tab !== 'overview') state.timelineScope = 'project';
+  state.detailTaskId = null;
+  state.composer = null;
+  state.deleteTaskId = null;
+  state.bellOpen = false;
+  state.projectMenuOpen = false;
+  renderAll({ resetScroll: true });
+}
+
+function openTask(id) {
+  const task = byId(tasks, id);
+  if (!task) return;
+  state.detailTaskId = task.id;
+  state.deleteTaskId = null;
+  state.composer = null;
+  state.bellOpen = false;
+  state.projectMenuOpen = false;
+  renderAll();
+}
+
+function openRequirement(id) {
+  const req = byId(requirements, id);
+  if (!req) return;
+  state.projectId = req.projectId;
+  state.tab = 'requirements';
+  state.reqScope = 'current';
+  state.reqStatus = 'all';
+  state.expandedReq = req.id;
+  state.detailTaskId = null;
+  state.composer = null;
+  state.deleteTaskId = null;
+  state.bellOpen = false;
+  state.projectMenuOpen = false;
+  renderAll({ resetScroll: true });
+  flashElement(`[data-req-id="${req.id}"]`, 'req-flash');
+}
+
+function openTaskTimelineForRequirement(id) {
+  const req = byId(requirements, id);
+  if (!req) return;
+  state.projectId = req.projectId;
+  state.tab = 'overview';
+  state.timelineScope = 'project';
+  state.eventFilter = 'all';
+  state.detailTaskId = null;
+  state.composer = null;
+  state.deleteTaskId = null;
+  renderAll({ resetScroll: true });
+  flashElement(`[data-event-req="${req.id}"]`, 'ev-flash');
+}
+
+function switchProject(id) {
+  const project = projectOf(id);
+  if (!project) return;
+  state.projectId = id;
+  state.timelineScope = 'project';
+  state.reqScope = 'current';
+  state.reqStatus = 'all';
+  state.expandedReq = requirements.find(req => req.projectId === id && req.status === '待确认')?.id || null;
+  state.taskFilter = 'all';
+  state.memoryFilter = 'all';
+  state.tab = 'overview';
+  state.detailTaskId = null;
+  state.composer = null;
+  state.deleteTaskId = null;
+  state.projectMenuOpen = false;
+  state.bellOpen = false;
+  renderAll({ resetScroll: true });
+  toast(`已切换到 ${project.shortCode}`);
+}
+
+function openComposer(config) {
+  state.composer = config;
+  state.detailTaskId = null;
+  state.deleteTaskId = null;
+  state.bellOpen = false;
+  state.projectMenuOpen = false;
+  renderAll();
+  requestAnimationFrame(() => {
+    const el = $('[data-autofocus]');
+    if (el) {
+      el.focus();
+      if (typeof el.select === 'function') el.select();
+    }
+  });
+}
+
+function flashElement(selector, className) {
+  requestAnimationFrame(() => {
+    const el = $(selector);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add(className);
+    setTimeout(() => el.classList.remove(className), 1900);
+  });
+}
+
+function openSearchTarget(type, id) {
+  if (type === 'req') openRequirement(id);
+  else if (type === 'task') openTask(id);
+  else if (type === 'memory') {
+    const memory = byId(memories, id);
+    if (memory) state.projectId = memory.projectId;
+    state.tab = 'memory';
+    state.memoryFilter = 'all';
+    state.detailTaskId = null;
+    state.composer = null;
+    state.deleteTaskId = null;
+    renderAll({ resetScroll: true });
+    flashElement(`[data-memory-id="${id}"]`, 'flash');
+  }
+}
+
+/* ============================================================
+   16 · mutations
+   ============================================================ */
+function pushEvent(entry) {
+  const at = entry.at || stamp();
+  events.unshift({
+    id: `live-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+    at,
+    actor: '你',
+    title: '',
+    tone: 'blue',
+    chips: [],
+    ...entry,
+  });
+}
+
+function confirmRequirement(id) {
+  const req = byId(requirements, id);
+  if (!req || req.status !== '待确认') return;
+  const at = stamp();
+  req.status = '已确认';
+  req.updatedAt = at;
+  pushEvent({
+    at, kind: 'confirm', projectId: req.projectId, actor: '你',
+    title: `确认需求 #${req.seqNo}`, text: `${req.title} · 进入可拆任务状态。`,
+    reqId: req.id, tone: 'blue', chips: [`#${projectOf(req.projectId).shortCode}-${req.seqNo}`],
+  });
+  toast(`需求已确认：${req.title}`);
+  renderAll();
+}
+
+function submitReview(id, decision) {
+  const task = byId(tasks, id);
+  if (!task || task.status !== '评审') return;
+  const commentEl = $('#reviewComment');
+  const comments = commentEl ? commentEl.value.trim() : '';
+  const at = stamp();
+  reviews.push({
+    id: `rv-live-${Date.now()}`,
+    taskId: task.id,
+    reviewAttemptId: task.currentAttemptId,
+    implementationAttemptId: null,
+    reviewer: '你',
+    decision,
+    comments: comments || null,
+    createdAt: at,
+  });
+  task.status = decision === '通过' ? '待验收' : '进行中';
+  task.updatedAt = at;
+  pushEvent({
+    at, kind: 'review', projectId: task.projectId, actor: '你',
+    title: `评审${decision} · ${task.title}`,
+    text: comments ? `「${comments}」` : (decision === '通过' ? '评审通过，任务转入待验收。' : '评审退回，任务回到进行中。'),
+    taskId: task.id, tone: decision === '通过' ? 'green' : 'red', chips: [decision],
+  });
+  toast(decision === '通过' ? '评审通过，任务转入待验收' : '已退回任务，执行器将继续处理');
+  renderAll();
+}
+
+function acceptTask(id) {
+  const task = byId(tasks, id);
+  if (!task || task.status !== '待验收') return;
+  const at = stamp();
+  task.status = '完成';
+  task.acceptedBy = '你';
+  task.acceptedAt = at;
+  task.updatedAt = at;
+  pushEvent({
+    at, kind: 'accept', projectId: task.projectId, actor: '你',
+    title: `验收通过 · ${task.title}`,
+    text: '任务关闭；运行记录、证据与审计保留。',
+    taskId: task.id, tone: 'green', chips: ['验收人 你'],
+  });
+  toast('已验收，任务关闭');
+  renderAll();
+}
+
+function dispatchTask(id) {
+  const task = byId(tasks, id);
+  if (!task || (task.status !== '就绪' && task.status !== '阻塞')) return;
+  const at = stamp();
+  const attempt = {
+    id: `a-live-${Date.now().toString(36)}`,
+    taskId: task.id,
+    stage: '执行中',
+    status: '运行中',
+    workerSessionId: `sess-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: at,
+    endedAt: null,
+    lastReportAt: at,
+    reports: [{ at, text: '执行器已接管，正在建立工作副本。' }],
+  };
+  attempts.push(attempt);
+  task.currentAttemptId = attempt.id;
+  task.status = '进行中';
+  task.attention = null;
+  task.updatedAt = at;
+  pushEvent({
+    at, kind: 'attempt', projectId: task.projectId, actor: '小雄 · 执行器',
+    title: `尝试开始 · ${task.title}`,
+    text: '任务已派发，执行器接管；最新报告会出现在这条时间线。',
+    taskId: task.id, tone: 'blue', chips: ['阶段 执行中'],
+  });
+  toast('已派发，执行器会继续推进');
+  renderAll();
+}
+
+function deleteTask(id) {
+  const task = byId(tasks, id);
+  if (!task) return;
+  const index = tasks.findIndex(item => item.id === id);
+  if (index >= 0) tasks.splice(index, 1);
+  state.deleteTaskId = null;
+  state.detailTaskId = null;
+  toast(`已删除「${task.title}」，运行记录与证据保留`);
+  renderAll();
+}
+
+function settleMemory(id, decision) {
+  const memory = byId(memories, id);
+  if (!memory) return;
+  memory.status = decision === '确认' ? '已确认' : '已废弃';
+  memory.updatedAt = stamp();
+  toast(decision === '确认' ? '记忆已确认，进入项目上下文' : '记忆已退回');
+  renderAll();
+}
+
+function ignoreInbox(id) {
+  const item = byId(inbox, id);
+  if (!item) return;
+  item.status = '已忽略';
+  toast(`已忽略这条${item.channel}收件`);
+  renderAll();
+}
+
+/* ============================================================
+   17 · composer submits
+   ============================================================ */
+function submitRequirementForm(form) {
+  const data = new FormData(form);
+  const projectId = String(data.get('projectId') || '');
+  const title = String(data.get('title') || '').trim();
+  const priority = String(data.get('priority') || 'P2');
+  const note = String(data.get('note') || '').trim();
+  const inboxId = String(data.get('inboxId') || '');
+  const continueSplit = data.get('continueSplit') === '1';
+  const errorEl = $('#composerError');
+  if (!projectId || !title) {
+    if (errorEl) errorEl.textContent = '请选择项目，并写清需求标题。';
+    return;
+  }
+  const item = inboxId ? byId(inbox, inboxId) : null;
+  const sourceNote = note || (item ? `${item.channel} · ${item.contact || '未留联系人'}：${item.rawContext}` : '');
+  const at = stamp();
+  const seqNo = Math.max(0, ...requirements.filter(req => req.projectId === projectId).map(req => req.seqNo)) + 1;
+  const req = {
+    id: `r-live-${Date.now()}`,
+    projectId,
+    seqNo,
+    title,
+    description: null,
+    status: '待确认',
+    priority,
+    sourceNote: sourceNote || null,
+    createdAt: at,
+    updatedAt: at,
+  };
+  requirements.unshift(req);
+  if (item) {
+    item.status = '已建需求';
+    item.triagedAt = at;
+  }
+  pushEvent({
+    at, kind: 'requirement', projectId, actor: item ? '你 · 收件分诊' : '你',
+    title: `新需求 · ${title}`,
+    text: sourceNote || '手动创建，等待确认。',
+    reqId: req.id, tone: 'ink', chips: [priority, '待确认'],
+  });
+  state.tab = 'requirements';
+  state.projectId = projectId;
+  state.reqScope = 'current';
+  state.reqStatus = 'all';
+  state.expandedReq = req.id;
+  state.projectMenuOpen = false;
+  state.bellOpen = false;
+  state.composer = continueSplit ? { mode: 'split', reqId: req.id } : null;
+  renderAll({ resetScroll: true });
+  if (continueSplit) {
+    toast('需求已创建，继续拆任务');
+    requestAnimationFrame(() => {
+      const el = $('[data-autofocus]');
+      if (el) el.focus();
+    });
+  } else {
+    flashElement(`[data-req-id="${req.id}"]`, 'req-flash');
+    toast(`需求已创建 · #${projectOf(projectId).shortCode}-${req.seqNo}`);
+  }
+}
+
+function submitSplitForm(form) {
+  const reqId = form.dataset.req;
+  const req = byId(requirements, reqId);
+  const errorEl = $('#splitError');
+  if (!req) {
+    if (errorEl) errorEl.textContent = '需求不存在，无法拆任务。';
+    return;
+  }
+  const data = new FormData(form);
+  const titles = String(data.get('titles') || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (!titles.length) {
+    if (errorEl) errorEl.textContent = '每行写一个任务，至少需要一行。';
+    return;
+  }
+  const type = String(data.get('taskType') || '开发');
+  const priority = String(data.get('priority') || req.priority || 'P2');
+  const acceptance = String(data.get('acceptance') || '').trim();
+  const at = stamp();
+  let seqNo = Math.max(0, ...tasks.filter(task => task.projectId === req.projectId).map(task => task.seqNo)) + 1;
+  titles.forEach((title, index) => {
+    tasks.push({
+      id: `t-live-${Date.now()}-${index}`,
+      projectId: req.projectId,
+      requirementId: req.id,
+      seqNo: seqNo++,
+      title,
+      type,
+      status: '就绪',
+      priority,
+      acceptance: acceptance || null,
+      currentAttemptId: null,
+      autoDispatch: false,
+      attention: null,
+      acceptedBy: null,
+      acceptedAt: null,
+      createdAt: at,
+      updatedAt: at,
+      spec: null,
+    });
+  });
+  req.status = '已拆分';
+  req.updatedAt = at;
+  pushEvent({
+    at, kind: 'split', projectId: req.projectId, actor: '你',
+    title: `需求 #${projectOf(req.projectId).shortCode}-${req.seqNo} 拆出 ${titles.length} 个任务`,
+    text: `${titles.slice(0, 3).join(' / ')}${titles.length > 3 ? ' …' : ''}`,
+    reqId: req.id, tone: 'ink', chips: [`${titles.length} 个任务`],
+  });
+  state.composer = null;
+  state.tab = 'requirements';
+  state.projectId = req.projectId;
+  state.reqScope = 'current';
+  state.reqStatus = 'all';
+  state.expandedReq = req.id;
+  state.bellOpen = false;
+  renderAll({ resetScroll: true });
+  flashElement(`[data-req-id="${req.id}"]`, 'req-flash');
+  toast(`已拆出 ${titles.length} 个任务`);
+}
+
+/* ============================================================
+   18 · search
+   ============================================================ */
+function openSearch() {
+  const pop = $('#searchPop');
+  if (!pop) return;
+  pop.hidden = false;
+  state.searchOpen = true;
+  renderSearch($('#globalSearch') ? $('#globalSearch').value : '');
+}
+
+function hideSearch() {
+  const pop = $('#searchPop');
+  if (pop) pop.hidden = true;
+  state.searchOpen = false;
+}
+
+function renderSearch(rawQuery) {
+  const pop = $('#searchPop');
+  if (!pop) return;
+  const query = String(rawQuery || '').trim();
+  const lower = query.toLowerCase();
+  const match = text => !query || String(text || '').toLowerCase().includes(lower);
+  const reqs = requirements
+    .filter(req => match(`${req.title} ${req.sourceNote || ''}`))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, query ? 5 : 3);
+  const taskList = tasks
+    .filter(task => match(`${task.title} ${task.acceptance || ''}`))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, query ? 4 : 2);
+  const mems = memories
+    .filter(memory => match(`${memory.title} ${memory.content}`))
+    .slice(0, query ? 3 : 1);
+  const total = reqs.length + taskList.length + mems.length;
+  const block = (label, rows) => rows.length ? `<div class="search-head"><span>${label}</span></div>${rows.join('')}` : '';
+  const reqRows = reqs.map(req => {
+    const project = projectOf(req.projectId);
+    return `<button class="search-result" data-search-type="req" data-search-id="${req.id}">
+      <span class="sr-ico">${icon('flow', 11)}</span>
+      <span class="sr-main">
+        <span class="sr-title">${esc(req.title)}</span>
+        <span class="sr-meta"><span>需求 #${req.seqNo}</span><span>${esc(project.shortCode)}</span><span>${esc(req.status)}</span></span>
+      </span>
+    </button>`;
+  });
+  const taskRows = taskList.map(task => {
+    const project = projectOf(task.projectId);
+    return `<button class="search-result" data-search-type="task" data-search-id="${task.id}">
+      <span class="sr-ico">${icon('task', 11)}</span>
+      <span class="sr-main">
+        <span class="sr-title">${esc(task.title)}</span>
+        <span class="sr-meta"><span>任务</span><span>${esc(project.shortCode)}</span><span>${esc(task.status)}</span></span>
+      </span>
+    </button>`;
+  });
+  const memRows = mems.map(memory => `<button class="search-result" data-search-type="memory" data-search-id="${memory.id}">
+      <span class="sr-ico">${icon('memory', 11)}</span>
+      <span class="sr-main">
+        <span class="sr-title">${esc(memory.title)}</span>
+        <span class="sr-meta"><span>记忆 · ${esc(memory.type)}</span><span>${esc(projectOf(memory.projectId).shortCode)}</span></span>
+      </span>
+    </button>`);
+  pop.innerHTML = `<div class="search-head"><span>${query ? `搜索结果 · ${total}` : '快速跳转'}</span><span>Esc 关闭</span></div>
+    ${query && !total ? `<div class="search-empty">没有找到「${esc(query)}」。试试项目代号、需求标题或任务名。</div>` : ''}
+    ${block('需求', reqRows)}
+    ${block('任务', taskRows)}
+    ${block('记忆', memRows)}
+    <div class="search-hint">${icon('search', 10)} 支持需求、任务与记忆 · <kbd>Ctrl K</kbd> 唤起搜索</div>`;
+}
+
+/* ============================================================
+   19 · events: clicks, inputs, submit, keyboard
+   ============================================================ */
+function handleClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const actionEl = target.closest('[data-action]');
+  const inProject = target.closest('.project-switch');
+  const inBell = target.closest('.bell-wrap');
+  let chromeDirty = false;
+
+  if (!inProject && !(actionEl && actionEl.dataset.action === 'toggle-project-menu') && state.projectMenuOpen) {
+    state.projectMenuOpen = false;
+    chromeDirty = true;
+  }
+  if (!inBell && !(actionEl && actionEl.dataset.action === 'toggle-bell') && state.bellOpen) {
+    state.bellOpen = false;
+    chromeDirty = true;
+  }
+  if (!target.closest('.global-search')) hideSearch();
+
+  const searchResult = target.closest('[data-search-type]');
+  if (searchResult) {
+    hideSearch();
+    openSearchTarget(searchResult.dataset.searchType, searchResult.dataset.searchId);
+    return;
+  }
+
+  if (!actionEl) {
+    if (target.closest('.search-box')) openSearch();
+    if (chromeDirty) renderChrome();
+    return;
+  }
+
+  const action = actionEl.dataset.action;
+  const id = actionEl.dataset.id;
+  if (action !== 'toggle-project-menu' && action !== 'toggle-bell') {
+    if (state.projectMenuOpen) { state.projectMenuOpen = false; chromeDirty = true; }
+    if (state.bellOpen) { state.bellOpen = false; chromeDirty = true; }
+  }
+
+  switch (action) {
+    case 'home': {
+      state.tab = 'overview';
+      state.timelineScope = 'project';
+      state.detailTaskId = null;
+      state.composer = null;
+      state.deleteTaskId = null;
+      state.projectMenuOpen = false;
+      state.bellOpen = false;
+      renderAll({ resetScroll: true });
+      break;
+    }
+    case 'tab':
+      goTab(actionEl.dataset.tab || 'overview');
+      break;
+    case 'toggle-project-menu':
+      state.projectMenuOpen = !state.projectMenuOpen;
+      state.bellOpen = false;
+      renderChrome();
+      break;
+    case 'toggle-bell':
+      state.bellOpen = !state.bellOpen;
+      state.projectMenuOpen = false;
+      renderChrome();
+      break;
+    case 'switch-project':
+      switchProject(id);
+      break;
+    case 'scope-all':
+      state.timelineScope = 'all';
+      state.tab = 'overview';
+      state.projectMenuOpen = false;
+      state.bellOpen = false;
+      renderAll({ resetScroll: true });
+      break;
+    case 'timeline-scope':
+      state.timelineScope = actionEl.dataset.scope || 'project';
+      renderAll();
+      break;
+    case 'event-filter':
+      state.eventFilter = actionEl.dataset.filter || 'all';
+      renderAll();
+      break;
+    case 'req-scope':
+      state.reqScope = actionEl.dataset.scope || 'current';
+      if (state.reqScope === 'all') state.expandedReq = null;
+      renderAll();
+      break;
+    case 'req-status':
+      state.reqStatus = actionEl.dataset.status || 'all';
+      renderAll();
+      break;
+    case 'req-status-jump': {
+      state.tab = 'requirements';
+      state.reqStatus = actionEl.dataset.status || 'all';
+      if (state.timelineScope === 'all') state.reqScope = 'all';
+      renderAll({ resetScroll: true });
+      break;
+    }
+    case 'toggle-req':
+      state.expandedReq = state.expandedReq === id ? null : id;
+      renderAll();
+      break;
+    case 'confirm-req':
+      confirmRequirement(id);
+      break;
+    case 'split-req':
+      openComposer({ mode: 'split', reqId: id });
+      break;
+    case 'new-requirement':
+      openComposer({ mode: 'create' });
+      break;
+    case 'open-req':
+      if (id) openRequirement(id);
+      break;
+    case 'open-req-timeline':
+      openTaskTimelineForRequirement(id);
+      break;
+    case 'open-task':
+      openTask(id);
+      break;
+    case 'open-inbox':
+      state.tab = 'inbox';
+      state.detailTaskId = null;
+      state.composer = null;
+      state.deleteTaskId = null;
+      renderAll({ resetScroll: true });
+      if (id) flashElement(`[data-inbox-id="${id}"]`, 'inbox-flash');
+      break;
+    case 'open-memory': {
+      const memory = id ? byId(memories, id) : null;
+      if (memory) state.projectId = memory.projectId;
+      state.tab = 'memory';
+      state.memoryFilter = memory ? 'all' : '待复核';
+      state.detailTaskId = null;
+      state.composer = null;
+      state.deleteTaskId = null;
+      renderAll({ resetScroll: true });
+      if (id) flashElement(`[data-memory-id="${id}"]`, 'flash');
+      break;
+    }
+    case 'ask-delete':
+      state.deleteTaskId = id || state.detailTaskId;
+      renderOverlays();
+      break;
+    case 'cancel-delete':
+      state.deleteTaskId = null;
+      renderOverlays();
+      break;
+    case 'confirm-delete':
+      deleteTask(state.deleteTaskId);
+      break;
+    case 'review-submit':
+      submitReview(id, actionEl.dataset.decision || '通过');
+      break;
+    case 'accept-task':
+      acceptTask(id);
+      break;
+    case 'dispatch-task':
+    case 'retry-task':
+      dispatchTask(id);
+      break;
+    case 'memory-decision':
+      settleMemory(id, actionEl.dataset.decision || '确认');
+      break;
+    case 'memory-filter':
+      state.memoryFilter = actionEl.dataset.status || 'all';
+      renderAll();
+      break;
+    case 'inbox-triage':
+      openComposer({ mode: 'triage', inboxId: id });
+      break;
+    case 'inbox-ignore':
+      ignoreInbox(id);
+      break;
+    case 'task-filter':
+      state.taskFilter = actionEl.dataset.status || 'all';
+      renderAll();
+      break;
+    case 'close-overlay':
+      state.composer = null;
+      renderOverlays();
+      break;
+    case 'close-sheet':
+      state.detailTaskId = null;
+      state.deleteTaskId = null;
+      renderOverlays();
+      break;
+    case 'pick': {
+      const group = actionEl.closest('.seg-control');
+      const form = actionEl.closest('form');
+      if (group) group.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button === actionEl)));
+      if (form) {
+        const hidden = form.querySelector(`input[type="hidden"][name="${actionEl.dataset.field}"]`);
+        if (hidden) hidden.value = actionEl.dataset.value || '';
+      }
+      if ($('#splitTitles') && actionEl.dataset.field === 'priority') updateSplitForm();
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (chromeDirty) renderChrome();
+}
+
+function handleInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.id === 'splitTitles') updateSplitForm();
+  if (target.id === 'composerTitle') {
+    const submit = $('[data-submit="composer"]');
+    if (submit) submit.disabled = !target.value.trim();
+  }
+  if (target.id === 'globalSearch') renderSearch(target.value);
+}
+
+function handleSubmit(event) {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  if (!form.matches('form[data-form]')) return;
+  event.preventDefault();
+  if (form.dataset.form === 'composer') submitRequirementForm(form);
+  else if (form.dataset.form === 'split') submitSplitForm(form);
+}
+
+function handleKeydown(event) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    const input = $('#globalSearch');
+    if (input) {
+      input.focus();
+      input.select();
+      openSearch();
+    }
+    return;
+  }
+  if (event.key === 'Escape') {
+    if (state.deleteTaskId) {
+      state.deleteTaskId = null;
+      renderOverlays();
+    } else if (state.composer) {
+      state.composer = null;
+      renderOverlays();
+    } else if (state.detailTaskId) {
+      state.detailTaskId = null;
+      renderOverlays();
+    } else if (state.projectMenuOpen || state.bellOpen) {
+      state.projectMenuOpen = false;
+      state.bellOpen = false;
+      renderChrome();
+    } else {
+      hideSearch();
+      const input = $('#globalSearch');
+      if (input && document.activeElement === input) input.blur();
+    }
+    return;
+  }
+  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof Element) {
+    const row = event.target.closest('[data-action][role="button"]');
+    if (row && event.target === row) {
+      event.preventDefault();
+      row.click();
+    }
+  }
+}
+
+/* ============================================================
+   20 · toast + boot
+   ============================================================ */
+function toast(message) {
+  const root = $('#toastRoot');
+  if (!root) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `${icon('check', 13)}<span>${esc(message)}</span>`;
+  root.appendChild(el);
+  while (root.children.length > 3) root.firstElementChild.remove();
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 220);
+  }, 2600);
+}
+
+document.addEventListener('click', handleClick);
+document.addEventListener('input', handleInput);
+document.addEventListener('submit', handleSubmit);
+document.addEventListener('keydown', handleKeydown);
+document.addEventListener('focusin', event => {
+  if (event.target instanceof HTMLElement && event.target.id === 'globalSearch') openSearch();
+});
+
+renderAll();
+</script>
+</body>
+</html>

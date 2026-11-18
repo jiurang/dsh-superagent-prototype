@@ -7,7 +7,7 @@ import { HEALTH_TEXT } from '../sources/host.ts'
 
 const TEXT = {
   // Shared
-  title: ['Superagent', 'Superagent'],
+  title: ['雄大工作台', 'Xiongda Workbench'],
   close: ['关闭', 'Close'],
   cancel: ['取消', 'Cancel'],
   confirm: ['确定', 'Confirm'],
@@ -97,7 +97,11 @@ const TEXT = {
   sourceOff: ['已关闭', 'Off'],
   executorWaitingSetup: ['执行器等待部署检查', 'Executor waiting for the deployment check'],
   // Header, search, and tabs
-  panel: ['Superagent', 'Superagent'],
+  panel: ['雄大工作台', 'Xiongda Workbench'],
+  panelToday: ['今天', 'Today'],
+  panelWork: ['工作', 'Work'],
+  panelInbox: ['收件', 'Inbox'],
+  panelKnowledge: ['知识', 'Knowledge'],
   openMaster: ['打开主 Session', 'Open main Session'],
   pagesLabel: ['dsh-superagent 页面', 'dsh-superagent pages'],
   searchPlaceholder: ['搜索工单、线程、触发或链接', 'Search Tickets, Threads, Triggers or links'],
@@ -112,6 +116,12 @@ const TEXT = {
   searchFoundCapped: ['找到 {tickets} 个工单、{threads} 个线程、前 {items} 条触发（请缩小搜索范围）', 'Found {tickets} Tickets, {threads} Threads and the first {items} Triggers (narrow the search)'],
   inThread: ['在 {thread}', 'in {thread}'],
   'tab.overview': ['概览', 'Overview'],
+  'tab.projects': ['项目', 'Projects'],
+  'tab.requirements': ['需求', 'Requirements'],
+  'tab.tasks': ['任务', 'Tasks'],
+  'tab.inbox': ['收件箱', 'Inbox'],
+  'tab.memory': ['记忆', 'Memory'],
+  'tab.reviews': ['评审', 'Reviews'],
   'tab.source': ['来源', 'Source'],
   'tab.trigger': ['触发', 'Trigger'],
   'tab.eval': ['评估', 'Eval'],
@@ -448,6 +458,10 @@ const TEXT = {
   'settingsGroup.execution': ['执行', 'Execution'],
   'settingsGroup.prompts': ['提示词', 'Prompts'],
   'settingsGroup.deployment': ['部署', 'Deployment'],
+  'settingsGroup.project': ['项目设置', 'Project settings'],
+  'settingsScope.system': ['系统设置 · 影响本实例所有项目', 'System settings · applies to every project in this instance'],
+  'settingsScope.project': ['项目设置 · 只影响所选项目', 'Project settings · applies only to the selected project'],
+  'settingsScope.systemHint': ['以下配置属于 dsh-superagent 实例，不随单个项目改变。', 'These settings belong to the dsh-superagent instance, not to a single project.'],
   unsetValue: ['未设置', 'not set'],
   // Prompts
   promptChanges: ['{count} 处修改', '{count} changes'],

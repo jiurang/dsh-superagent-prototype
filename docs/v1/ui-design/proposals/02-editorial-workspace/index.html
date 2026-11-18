@@ -1,0 +1,3457 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>雄大工作台 · 杂志式工作台</title>
+<style>
+/* ============================================================
+   02 · Editorial Workspace
+   Paper, ink, one vermilion accent. Rules before boxes.
+   ============================================================ */
+:root {
+  --paper: #f5f2ea;
+  --paper-deep: #ece7da;
+  --surface: #fbf9f4;
+  --surface-warm: #f8f4ea;
+  --ink: #1e1c17;
+  --ink-2: #3b3831;
+  --muted: #706a5e;
+  --faint: #948c7c;
+  --rule: #ddd6c8;
+  --rule-strong: #c6bdac;
+  --accent: #9c3327;
+  --accent-deep: #7b261c;
+  --accent-soft: #f0e2dd;
+  --success: #446a52;
+  --warning: #8a6428;
+  --info: #3f5f77;
+  --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", STSong, SimSun, Georgia, serif;
+  --display: Georgia, "Times New Roman", "Songti SC", "Noto Serif CJK SC", SimSun, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --shadow: 0 24px 64px -32px rgba(42, 35, 24, .42);
+}
+* , *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light; scrollbar-gutter: stable; }
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.is-locked { overflow: hidden; }
+::selection { background: var(--accent-soft); color: var(--accent-deep); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { padding: 0; border: 0; background: none; cursor: pointer; }
+a { color: inherit; }
+p, h1, h2, h3, h4, blockquote, dl, dd, figure { margin: 0; }
+ol, ul { margin: 0; padding: 0; list-style: none; }
+svg { display: block; flex: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+[hidden] { display: none !important; }
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: 200;
+  padding: 8px 14px; background: var(--ink); color: var(--paper);
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: none; }
+
+/* ---------- masthead ---------- */
+.masthead {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.masthead::before {
+  content: ""; display: block; height: 4px; background: var(--accent);
+}
+.masthead__inner {
+  max-width: 1240px; margin: 0 auto; padding: 0 40px;
+}
+.masthead__row {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 24px; min-height: 68px;
+  border-bottom: 1px solid var(--rule);
+}
+.wordmark {
+  display: flex; align-items: baseline; gap: 13px; justify-self: start;
+  text-align: left;
+}
+.wordmark__cn {
+  font-family: var(--serif); font-size: 22px; font-weight: 700;
+  letter-spacing: .08em; line-height: 1.2;
+}
+.wordmark__en {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .18em;
+  color: var(--faint); white-space: nowrap;
+}
+.masthead__date {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 10.5px; letter-spacing: .1em; color: var(--muted);
+  white-space: nowrap;
+}
+.masthead__date::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+}
+.masthead__tools {
+  display: flex; align-items: center; justify-content: flex-end; gap: 16px;
+}
+.search-wrap {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  width: 248px; height: 32px;
+  border-bottom: 1px solid var(--rule-strong);
+  color: var(--faint);
+  transition: border-color .18s ease, color .18s ease;
+}
+.search-wrap:focus-within { border-color: var(--ink); color: var(--ink); }
+.search-wrap input {
+  flex: 1; min-width: 0; height: 30px;
+  border: 0; outline: 0; background: transparent;
+  font-size: 12.5px; letter-spacing: .02em; color: var(--ink);
+}
+.search-wrap input::placeholder { color: var(--faint); }
+.search-wrap kbd {
+  padding: 0 5px; border: 1px solid var(--rule); border-radius: 2px;
+  font-family: var(--mono); font-size: 9px; line-height: 16px; color: var(--faint);
+}
+.search-results {
+  position: absolute; top: calc(100% + 12px); right: 0; z-index: 60;
+  width: 400px; max-height: 70vh; overflow: auto;
+  padding: 10px; border: 1px solid var(--ink);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.search-results__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 8px 10px; border-bottom: 1px solid var(--rule);
+  font-size: 10px; letter-spacing: .14em; color: var(--faint);
+}
+.search-results__group {
+  padding: 12px 8px 4px; font-size: 9.5px; letter-spacing: .16em; color: var(--accent);
+}
+.search-result {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px; align-items: center; width: 100%;
+  padding: 8px; text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+.search-result:last-child { border-bottom: 0; }
+.search-result:hover { background: var(--surface-warm); }
+.search-result__no { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.search-result__title {
+  font-family: var(--serif); font-size: 14px; line-height: 1.45;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.search-results__empty { padding: 18px 8px; font-size: 12px; color: var(--muted); }
+
+.masthead__nav { display: flex; align-items: stretch; gap: 8px; min-height: 50px; }
+.nav { display: flex; align-items: stretch; flex: 1; min-width: 0; }
+.nav__item {
+  position: relative; display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 0 17px; color: var(--muted);
+  font-size: 13px; letter-spacing: .04em; white-space: nowrap;
+  transition: color .16s ease;
+}
+.nav__item:first-child { padding-left: 0; }
+.nav__item:hover { color: var(--ink); }
+.nav__no {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0;
+  color: var(--faint); transform: translateY(-5px);
+}
+.nav__item[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.nav__item[aria-current="page"] .nav__no { color: var(--accent); }
+.nav__item[aria-current="page"]::after {
+  content: ""; position: absolute; left: 17px; right: 17px; bottom: 0;
+  height: 2px; background: var(--accent);
+}
+.nav__item:first-child[aria-current="page"]::after { left: 0; }
+.nav__count {
+  font-family: var(--mono); font-size: 8.5px; color: var(--faint);
+  transform: translateY(-5px); font-weight: 400;
+}
+.nav__item[aria-current="page"] .nav__count { color: var(--muted); }
+
+.project-switch { position: relative; display: flex; align-items: center; margin-left: auto; padding-left: 20px; border-left: 1px solid var(--rule); }
+.project-switch__btn {
+  display: flex; align-items: center; gap: 9px; max-width: 330px;
+  height: 34px; padding: 0 2px; color: var(--muted);
+}
+.project-switch__btn:hover .project-switch__name { color: var(--ink); }
+.project-switch__label { font-size: 9px; letter-spacing: .14em; color: var(--faint); white-space: nowrap; }
+.project-switch__code {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .03em;
+  color: var(--ink); border: 1px solid var(--rule-strong); padding: 0 5px; line-height: 17px;
+}
+.project-switch__name {
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; color: var(--muted); transition: color .16s ease;
+}
+.project-switch__btn svg { color: var(--faint); transition: transform .2s ease; }
+.project-switch__btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.project-popover {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 70;
+  width: 372px; padding: 18px 18px 10px;
+  border: 1px solid var(--ink); background: var(--surface); box-shadow: var(--shadow);
+}
+.project-popover__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-bottom: 12px; border-bottom: 1px solid var(--ink);
+}
+.project-popover__head strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+.project-popover__head span { font-size: 9px; letter-spacing: .12em; color: var(--faint); }
+.project-option {
+  display: grid; grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: 12px; align-items: center; width: 100%; padding: 13px 0;
+  border-bottom: 1px solid var(--rule); text-align: left;
+}
+.project-option:hover .project-option__name { color: var(--accent); }
+.project-option__code {
+  font-family: var(--display); font-size: 12px; line-height: 1.18;
+  word-break: normal; overflow-wrap: anywhere; letter-spacing: -.015em; color: var(--ink);
+}
+.project-option__name {
+  display: block; font-family: var(--serif); font-size: 15px; line-height: 1.4;
+  transition: color .16s ease;
+}
+.project-option__meta { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: .06em; color: var(--faint); }
+.project-option__check { font-family: var(--mono); font-size: 9px; color: var(--accent); letter-spacing: .08em; }
+.project-popover__all {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 13px 0 5px; font-size: 11px; color: var(--muted); text-align: left;
+}
+.project-popover__all:hover { color: var(--accent); }
+
+/* ---------- page frame ---------- */
+.page-shell { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+#page { padding-bottom: 80px; }
+#page.is-entering { animation: page-in .36s ease both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+.page-head { padding: 42px 0 26px; border-bottom: 1px solid var(--ink); margin-bottom: 30px; }
+.eyebrow {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 9.5px; letter-spacing: .2em; color: var(--muted);
+  text-transform: uppercase;
+}
+.eyebrow::before { content: ""; width: 17px; height: 1px; background: var(--accent); }
+.eyebrow--plain::before { display: none; }
+.page-head .eyebrow { margin-bottom: 18px; }
+.page-head__row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px 44px; align-items: end;
+}
+.page-head h1 {
+  font-family: var(--serif); font-size: clamp(44px, 5.4vw, 66px);
+  font-weight: 700; line-height: 1; letter-spacing: -.03em;
+  white-space: nowrap;
+}
+.page-head__standfirst {
+  max-width: 560px; padding-bottom: 5px;
+  font-family: var(--serif); font-size: 15.5px; line-height: 1.85; color: var(--muted);
+}
+.page-head__aside {
+  justify-self: end; padding-bottom: 6px; text-align: right;
+  font-size: 10px; letter-spacing: .12em; color: var(--faint); white-space: nowrap;
+}
+.page-head__aside strong {
+  display: block; font-family: var(--display); font-size: 32px; line-height: 1;
+  font-weight: 400; color: var(--ink); letter-spacing: -.02em;
+}
+.page-head__aside span { display: block; margin-top: 5px; }
+
+/* ---------- project band ---------- */
+.project-band {
+  display: grid; grid-template-columns: 296px minmax(0, 1fr);
+  border: 1px solid var(--rule-strong); background: var(--surface);
+  margin-bottom: 34px;
+}
+.project-band__cover {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 24px;
+  min-height: 226px; padding: 24px 26px 22px;
+  background: var(--paper-deep); border-right: 1px solid var(--rule-strong);
+}
+.cover-rule {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 8.5px; letter-spacing: .17em; color: var(--faint);
+}
+.cover-rule::before { display: none; }
+.cover-rule span:first-child::before {
+  content: ""; display: inline-block; width: 13px; height: 1px;
+  background: var(--accent); margin-right: 7px; vertical-align: middle;
+}
+.project-band__code {
+  font-family: var(--display); font-size: 62px; font-weight: 700;
+  line-height: .88; letter-spacing: -.045em; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.project-band__code.is-long { font-size: 38px; line-height: .98; letter-spacing: -.03em; }
+.project-band__imprint {
+  padding-top: 12px; border-top: 1px solid var(--rule-strong);
+  font-family: var(--serif); font-size: 11px; letter-spacing: .08em; color: var(--muted);
+}
+.project-band__body {
+  display: flex; flex-direction: column; gap: 0; min-width: 0;
+  padding: 25px 32px 22px;
+}
+.meta-line {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 13px;
+  font-size: 9.5px; letter-spacing: .12em; color: var(--faint);
+}
+.meta-line__sep { width: 12px; height: 1px; background: var(--rule-strong); }
+.project-band__body h2 {
+  margin: 12px 0 7px;
+  font-family: var(--serif); font-size: clamp(28px, 3.2vw, 39px);
+  font-weight: 700; line-height: 1.22; letter-spacing: -.025em;
+}
+.project-band__line {
+  max-width: 720px; font-family: var(--serif); font-size: 14px;
+  line-height: 1.8; color: var(--muted);
+}
+.project-band__foot {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-top: auto; padding-top: 20px;
+}
+.band-stats { display: flex; align-items: baseline; gap: 0; }
+.band-stats > div { padding: 0 20px; border-left: 1px solid var(--rule); }
+.band-stats > div:first-child { padding-left: 0; border-left: 0; }
+.band-stats dt { font-size: 9px; letter-spacing: .13em; color: var(--faint); }
+.band-stats dd {
+  font-family: var(--display); font-size: 23px; line-height: 1.25; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.band-foot__meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  font-size: 9.5px; letter-spacing: .04em; color: var(--faint); text-align: right;
+}
+.band-foot__meta code { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+.row-button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; letter-spacing: .05em; color: var(--muted);
+  border-bottom: 1px solid transparent;
+}
+.row-button:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* compact band on working pages */
+.project-band--compact { grid-template-columns: 196px minmax(0, 1fr); margin-bottom: 28px; }
+.project-band--compact .project-band__cover { min-height: 132px; padding: 18px 20px 16px; gap: 12px; }
+.project-band--compact .project-band__code { font-size: 34px; line-height: .94; }
+.project-band--compact .project-band__code.is-long { font-size: 21px; }
+.project-band--compact .project-band__imprint { font-size: 9.5px; padding-top: 8px; }
+.project-band--compact .project-band__body { padding: 17px 24px 15px; }
+.project-band--compact .project-band__body h2 { margin: 7px 0 3px; font-size: 26px; }
+.project-band--compact .project-band__line { font-size: 12px; line-height: 1.65; max-width: 660px; }
+.project-band--compact .project-band__foot { padding-top: 12px; }
+.project-band--compact .band-stats { display: none; }
+.project-band--compact .band-foot__meta { flex-direction: row; align-items: center; gap: 12px; }
+
+/* ---------- generic controls ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 0 15px;
+  border: 1px solid var(--rule-strong); border-radius: 2px;
+  background: transparent; color: var(--ink);
+  font-size: 12px; letter-spacing: .04em; line-height: 1;
+  transition: color .16s ease, background .16s ease, border-color .16s ease;
+}
+.btn:hover { border-color: var(--ink); background: var(--surface-warm); }
+.btn--primary { border-color: var(--accent); background: var(--accent); color: #fffaf4; }
+.btn--primary:hover { border-color: var(--accent-deep); background: var(--accent-deep); color: #fffaf4; }
+.btn--ghost { border-color: transparent; padding-inline: 5px; color: var(--muted); }
+.btn--ghost:hover { border-color: transparent; background: transparent; color: var(--ink); }
+.btn--sm { min-height: 28px; padding: 0 10px; font-size: 11px; }
+.btn--danger { border-color: transparent; color: var(--accent); }
+.btn--danger:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+.btn:disabled { opacity: .38; cursor: not-allowed; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 1px solid transparent; border-radius: 50%;
+  color: var(--muted);
+}
+.icon-btn:hover { color: var(--ink); border-color: var(--rule); }
+.micro { font-size: 9px; letter-spacing: .13em; color: var(--faint); text-transform: uppercase; }
+.mono { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0; }
+.hint { font-size: 11.5px; color: var(--muted); }
+.hint--tight { line-height: 1.6; }
+.status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; letter-spacing: .06em; color: var(--muted); white-space: nowrap;
+}
+.status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }
+.status[data-tone="success"] { color: var(--success); }
+.status[data-tone="warning"] { color: var(--warning); }
+.status[data-tone="info"] { color: var(--info); }
+.status[data-tone="danger"] { color: var(--accent); }
+.status[data-tone="quiet"] { color: var(--faint); }
+.status--bare::before { display: none; }
+.prio {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 18px; padding: 0 5px;
+  border: 1px solid var(--rule-strong); border-radius: 1px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .03em; color: var(--muted);
+}
+.prio[data-p="P0"] { border-color: var(--accent); color: var(--accent); }
+.prio[data-p="P1"] { border-color: #b89a68; color: var(--warning); }
+.type-label { font-size: 9px; letter-spacing: .15em; color: var(--faint); }
+.dot-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--rule-strong); }
+.notice {
+  padding: 12px 16px; border-left: 2px solid var(--accent);
+  background: var(--accent-soft); color: var(--ink-2);
+  font-size: 12.5px; line-height: 1.7;
+}
+.empty-state {
+  padding: 42px 30px; border: 1px dashed var(--rule-strong);
+  text-align: center; color: var(--muted); background: var(--surface-warm);
+}
+.empty-state strong {
+  display: block; margin-bottom: 6px;
+  font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--ink-2);
+}
+.empty-state p { font-size: 12.5px; }
+
+/* ---------- overview ---------- */
+.lede {
+  display: grid; grid-template-columns: 148px minmax(0, 1fr);
+  gap: 28px; padding: 0 0 32px; margin-bottom: 0;
+}
+.lede__label { padding-top: 6px; font-size: 9px; letter-spacing: .16em; color: var(--faint); }
+.lede__label strong {
+  display: block; margin-top: 4px; font-family: var(--serif);
+  font-size: 12px; letter-spacing: .07em; color: var(--ink-2); font-weight: 600;
+}
+.lede p {
+  max-width: 820px; font-family: var(--serif); font-size: 20px; line-height: 1.9;
+  letter-spacing: .01em; color: var(--ink-2);
+}
+.lede p em { font-style: normal; color: var(--accent); }
+.metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule);
+  margin-bottom: 42px;
+}
+.metric { padding: 17px 22px 16px; border-left: 1px solid var(--rule); }
+.metric:first-child { padding-left: 0; border-left: 0; }
+.metric__value {
+  font-family: var(--display); font-size: 44px; line-height: 1.05;
+  letter-spacing: -.035em; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.metric__label { margin-top: 3px; font-size: 10px; letter-spacing: .09em; color: var(--ink-2); }
+.metric__note { margin-top: 2px; font-size: 9.5px; color: var(--faint); }
+.overview-grid { display: grid; grid-template-columns: minmax(0, 1fr) 334px; gap: 52px; align-items: start; }
+.overview-main { min-width: 0; }
+.overview-side { min-width: 0; padding-left: 28px; border-left: 1px solid var(--rule); }
+.section-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding-top: 11px; margin-bottom: 18px; border-top: 1px solid var(--ink);
+}
+.section-head h2 {
+  font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1.3;
+  letter-spacing: -.01em;
+}
+.section-head h2 .section-no {
+  display: inline-block; margin-right: 10px;
+  font-family: var(--mono); font-size: 9px; font-weight: 400;
+  letter-spacing: .05em; color: var(--accent); vertical-align: super;
+}
+.section-head__aside { font-size: 9.5px; letter-spacing: .11em; color: var(--faint); white-space: nowrap; }
+.overview-main .section-head + .section-head,
+.overview-main section + section { margin-top: 40px; }
+.decision {
+  display: grid; grid-template-columns: 54px minmax(0, 1fr) auto;
+  gap: 18px; align-items: start;
+  padding: 17px 0 16px; border-bottom: 1px solid var(--rule);
+}
+.decision:first-of-type { padding-top: 2px; }
+.decision__kind {
+  display: flex; flex-direction: column; gap: 5px;
+  padding-top: 2px; font-size: 9px; letter-spacing: .1em; color: var(--faint);
+}
+.decision__kind .mono { color: var(--ink-2); font-size: 10px; }
+.decision__body h3 {
+  font-family: var(--serif); font-size: 19px; font-weight: 600; line-height: 1.5;
+  letter-spacing: -.01em;
+}
+.decision__body h3 button { text-align: left; }
+.decision__body h3 button:hover { color: var(--accent); }
+.decision__body p { margin-top: 4px; font-size: 11px; line-height: 1.65; color: var(--muted); }
+.decision__action { padding-top: 4px; }
+.front-task {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) auto auto;
+  gap: 14px; align-items: center; width: 100%;
+  padding: 12px 0; border-bottom: 1px solid var(--rule); text-align: left;
+}
+.front-task:first-child { padding-top: 4px; }
+.front-task:hover .front-task__title { color: var(--accent); }
+.front-task__no { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.front-task__title {
+  font-family: var(--serif); font-size: 15.5px; line-height: 1.5;
+  transition: color .16s ease;
+}
+.front-task__req { font-size: 9.5px; letter-spacing: .04em; color: var(--faint); text-align: right; }
+.front-task__arrow { color: var(--faint); }
+.toc { margin-bottom: 36px; }
+.toc__head { padding: 11px 0 12px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); margin-bottom: 0; }
+.toc__head h2 { font-family: var(--serif); font-size: 20px; font-weight: 700; }
+.toc__head span { display: block; margin-top: 2px; font-size: 8.5px; letter-spacing: .16em; color: var(--faint); }
+.toc__item {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px; align-items: baseline; width: 100%; padding: 11px 0;
+  border-bottom: 1px solid var(--rule); text-align: left;
+}
+.toc__item:hover .toc__title { color: var(--accent); }
+.toc__no { font-family: var(--display); font-size: 10px; color: var(--faint); }
+.toc__title { font-family: var(--serif); font-size: 15px; transition: color .16s ease; }
+.toc__count { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
+.feed { margin-top: 2px; }
+.feed__head { padding: 11px 0 12px; border-top: 1px solid var(--ink); margin-bottom: 2px; }
+.feed__head h2 { font-family: var(--serif); font-size: 20px; font-weight: 700; }
+.feed__head span { display: block; margin-top: 2px; font-size: 8.5px; letter-spacing: .16em; color: var(--faint); }
+.feed li {
+  position: relative; padding: 10px 0 10px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.feed li::before {
+  content: ""; position: absolute; left: 0; top: 18px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--rule-strong);
+}
+.feed li:first-child::before { background: var(--accent); }
+.feed time { display: block; font-size: 8.5px; letter-spacing: .08em; color: var(--faint); }
+.feed p { margin-top: 2px; font-size: 11px; line-height: 1.65; color: var(--ink-2); }
+
+/* ---------- projects ---------- */
+.cover-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 52px; }
+.project-cover {
+  display: flex; flex-direction: column; min-width: 0;
+  border: 1px solid var(--rule-strong); background: var(--surface);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.project-cover.is-current { border-color: var(--ink); box-shadow: 0 18px 42px -36px rgba(42,35,24,.55); }
+.cover-art {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 252px; padding: 22px 26px 22px;
+  background: var(--paper-deep); border-bottom: 1px solid var(--rule-strong);
+}
+.cover-art__top {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 8.5px; letter-spacing: .16em; color: var(--faint);
+}
+.cover-art__code {
+  margin: 24px 0 0; font-family: var(--display);
+  font-size: 62px; font-weight: 700; line-height: .9; letter-spacing: -.045em;
+  color: var(--ink); overflow-wrap: anywhere;
+}
+.cover-art--long .cover-art__code {
+  font-size: 38px; line-height: 1.02; letter-spacing: -.03em;
+  word-break: break-word;
+}
+.cover-art__bottom {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+  padding-top: 15px; font-size: 9px; letter-spacing: .1em; color: var(--muted);
+}
+.cover-art__bottom strong { font-family: var(--serif); font-size: 12px; letter-spacing: .05em; color: var(--ink-2); font-weight: 600; }
+.current-stamp {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 8.5px; letter-spacing: .14em; color: var(--accent);
+}
+.current-stamp::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.project-cover__body { display: flex; flex-direction: column; flex: 1; padding: 22px 26px 20px; }
+.project-cover__meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 9px; letter-spacing: .1em; color: var(--faint);
+}
+.project-cover h2 {
+  margin: 10px 0 6px; font-family: var(--serif);
+  font-size: 25px; font-weight: 700; line-height: 1.35; letter-spacing: -.015em;
+}
+.project-cover__desc { font-size: 12px; line-height: 1.75; color: var(--muted); }
+.cover-stats {
+  display: flex; align-items: baseline; gap: 0; margin-top: 18px;
+  padding-top: 14px; border-top: 1px solid var(--rule);
+}
+.cover-stats > div { padding: 0 16px; border-left: 1px solid var(--rule); }
+.cover-stats > div:first-child { padding-left: 0; border-left: 0; }
+.cover-stats dt { font-size: 8.5px; letter-spacing: .12em; color: var(--faint); }
+.cover-stats dd { font-family: var(--display); font-size: 21px; line-height: 1.3; }
+.cover-stats .cover-stats__danger dd { color: var(--accent); }
+.project-cover__actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.project-cover__path {
+  margin-top: auto; padding-top: 16px; font-family: var(--mono);
+  font-size: 9px; line-height: 1.6; color: var(--faint); overflow-wrap: anywhere;
+}
+.projects-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 13px; margin-bottom: 20px; border-top: 1px solid var(--ink); }
+.projects-toolbar h2 { font-family: var(--serif); font-size: 21px; font-weight: 700; }
+.projects-toolbar span { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .04em; color: var(--faint); }
+.boundary {
+  display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px;
+  padding: 30px 0 0; border-top: 1px solid var(--ink);
+}
+.boundary h2 {
+  margin-top: 10px; font-family: var(--serif); font-size: 26px; line-height: 1.45;
+  font-weight: 700; letter-spacing: -.01em;
+}
+.boundary__cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.boundary__col { padding-top: 11px; border-top: 1px solid var(--rule-strong); }
+.boundary__col h3 { display: flex; align-items: baseline; gap: 8px; font-family: var(--serif); font-size: 16px; font-weight: 600; }
+.boundary__col h3 span { font-family: var(--mono); font-size: 8px; color: var(--accent); letter-spacing: .06em; font-weight: 400; }
+.boundary__col p { margin-top: 7px; font-size: 11.5px; line-height: 1.8; color: var(--muted); }
+
+/* ---------- requirements ---------- */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.chips { display: flex; flex-wrap: wrap; border: 1px solid var(--rule-strong); background: var(--surface); }
+.chip {
+  position: relative; height: 32px; padding: 0 12px;
+  border-right: 1px solid var(--rule); color: var(--muted);
+  font-size: 10.5px; letter-spacing: .04em; white-space: nowrap;
+  transition: color .14s ease, background .14s ease;
+}
+.chip:last-child { border-right: 0; }
+.chip:hover { color: var(--ink); background: var(--surface-warm); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.chip__n { margin-left: 6px; font-family: var(--mono); font-size: 8.5px; opacity: .6; }
+.toolbar__right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.brief {
+  display: grid; grid-template-columns: 86px minmax(0, 1fr);
+  margin-bottom: 15px; border: 1px solid var(--rule-strong);
+  background: var(--surface); min-width: 0;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.brief:hover { border-color: var(--faint); box-shadow: 0 16px 38px -34px rgba(42,35,24,.6); }
+.brief--open { border-color: var(--ink); }
+.brief__rail {
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  padding: 22px 15px 20px; border-right: 1px solid var(--rule);
+}
+.brief__no { font-family: var(--display); font-size: 25px; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.brief__no small { display: block; margin-top: 5px; font-family: var(--sans); font-size: 8px; letter-spacing: .13em; color: var(--faint); }
+.brief__rail .status { margin-top: auto; font-size: 9.5px; }
+.brief__body { min-width: 0; padding: 20px 28px 0; }
+.brief__top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.brief__updated { margin-left: auto; font-size: 9.5px; letter-spacing: .04em; color: var(--faint); white-space: nowrap; }
+.brief h3 {
+  margin: 11px 0 7px; font-family: var(--serif);
+  font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -.02em;
+}
+.brief h3 button { text-align: left; }
+.brief h3 button:hover { color: var(--accent); }
+.brief__lede { max-width: 820px; font-size: 12.5px; line-height: 1.8; color: var(--muted); }
+.brief__source {
+  margin: 15px 0 16px; padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--accent);
+  font-family: var(--serif); font-size: 14.5px; line-height: 1.8; color: var(--ink-2);
+}
+.brief__source span { display: block; margin-bottom: 1px; font-family: var(--sans); font-size: 8.5px; letter-spacing: .12em; color: var(--faint); }
+.brief__facts {
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 22px; padding: 12px 0 14px; border-top: 1px solid var(--rule);
+}
+.brief__fact dt { font-size: 8.5px; letter-spacing: .12em; color: var(--faint); }
+.brief__fact dd { margin-top: 3px; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
+.brief__fact dd .status { font-size: 10px; }
+.brief__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 0 -28px; padding: 10px 28px; border-top: 1px solid var(--rule);
+  background: var(--surface-warm);
+}
+.brief__tasks { font-size: 9.5px; letter-spacing: .04em; color: var(--faint); }
+.brief__actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.brief__actions .btn--primary { margin-left: 5px; }
+
+/* split editor — progressive disclosure inside one brief */
+.split {
+  grid-column: 1 / -1; padding: 24px 30px 24px 30px;
+  border-top: 1px solid var(--ink); background: var(--paper-deep);
+}
+.split__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.split__head .eyebrow { margin-bottom: 6px; }
+.split__head h4 { font-family: var(--serif); font-size: 21px; font-weight: 600; line-height: 1.4; }
+.split__head p { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--muted); text-align: right; }
+.split__grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 22px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span { font-size: 9px; letter-spacing: .11em; color: var(--muted); }
+.field small { font-size: 9.5px; line-height: 1.55; color: var(--faint); }
+.field input, .field textarea, .field select {
+  width: 100%; min-width: 0; border: 1px solid var(--rule-strong); border-radius: 0;
+  background: var(--surface); color: var(--ink);
+  font-size: 12.5px; line-height: 1.6;
+}
+.field input, .field select { height: 34px; padding: 0 10px; }
+.field textarea { padding: 9px 10px; resize: vertical; }
+.field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.field select {
+  appearance: none; padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' fill='none' stroke='%231e1c17' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.split__side { display: flex; flex-direction: column; gap: 12px; }
+.split [data-split-titles] { min-height: 164px; }
+.split__preview {
+  margin-top: 18px; padding: 13px 16px; border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong); background: rgba(251,249,244,.47);
+}
+.split__preview-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+.split__preview-head span { font-size: 8.5px; letter-spacing: .13em; color: var(--faint); }
+.split__preview-head b { font-family: var(--mono); font-size: 9px; font-weight: 400; color: var(--accent); }
+.split__list { display: flex; flex-direction: column; gap: 4px; }
+.split__list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 11.5px; line-height: 1.6; }
+.split__list li span { font-family: var(--mono); font-size: 9px; color: var(--faint); }
+.split__empty { font-size: 11px; color: var(--faint); }
+.split__warn { margin-top: 8px; font-size: 10px; line-height: 1.6; color: var(--warning); }
+.split__foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 17px; }
+.split__foot .hint { font-size: 9.5px; letter-spacing: .03em; }
+.split__actions { display: flex; align-items: center; gap: 8px; }
+.split__actions .btn { background: var(--surface); }
+.split__actions .btn--primary { background: var(--accent); }
+
+/* ---------- tasks ---------- */
+.task-group { margin-bottom: 34px; }
+.task-group__head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 10px; border-bottom: 1px solid var(--ink);
+}
+.task-group__no { font-family: var(--display); font-size: 25px; line-height: 1; color: var(--ink); }
+.task-group__title {
+  font-family: var(--serif); font-size: 18px; line-height: 1.45; font-weight: 600;
+  letter-spacing: -.01em;
+}
+.task-group__title button { text-align: left; }
+.task-group__title button:hover { color: var(--accent); }
+.task-group__meta { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 9.5px; color: var(--faint); }
+.task-sheet { border: 1px solid var(--rule-strong); border-top: 0; background: var(--surface); }
+.task-row {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) 132px 26px;
+  gap: 18px; align-items: center; width: 100%; padding: 15px 22px;
+  border-bottom: 1px solid var(--rule); text-align: left;
+  transition: background .16s ease;
+}
+.task-row:last-child { border-bottom: 0; }
+.task-row:hover { background: var(--surface-warm); }
+.task-row__no { font-family: var(--mono); font-size: 9.5px; color: var(--faint); align-self: start; padding-top: 5px; }
+.task-row__main { min-width: 0; }
+.task-row__kicker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+.task-row__attempt { font-family: var(--mono); font-size: 8.5px; color: var(--faint); }
+.task-row__title {
+  font-family: var(--serif); font-size: 16.5px; line-height: 1.5; font-weight: 600;
+  letter-spacing: -.005em; transition: color .16s ease;
+}
+.task-row:hover .task-row__title { color: var(--accent); }
+.task-row__side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.task-row__time { font-size: 8.5px; color: var(--faint); letter-spacing: .02em; }
+.task-row__arrow { justify-self: end; color: var(--faint); }
+.task-group__empty { padding: 14px 22px; font-size: 11px; color: var(--faint); }
+
+/* ---------- inbox ---------- */
+.letter {
+  display: grid; grid-template-columns: 148px minmax(0, 1fr) 128px;
+  gap: 30px; align-items: start; padding: 26px 0 28px;
+  border-bottom: 1px solid var(--rule);
+}
+.letter__meta { display: flex; flex-direction: column; gap: 5px; padding-top: 3px; }
+.letter__channel { font-size: 9px; letter-spacing: .14em; color: var(--accent); }
+.letter__contact { font-family: var(--serif); font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.letter__time { font-size: 9px; color: var(--faint); }
+.letter__quote {
+  font-family: var(--serif); font-size: 19px; line-height: 1.75;
+  color: var(--ink); letter-spacing: -.01em;
+}
+.letter__quote::before { content: "“"; color: var(--accent); margin-right: 2px; }
+.letter__quote::after { content: "”"; color: var(--accent); margin-left: 2px; }
+.letter__sub { margin-top: 8px; font-size: 9.5px; letter-spacing: .03em; color: var(--faint); }
+.letter__actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding-top: 3px; }
+.letter__actions .btn { justify-content: center; }
+.letter:first-of-type { border-top: 0; }
+.inbox-note {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 15px 0; border-top: 1px solid var(--ink); margin-bottom: 4px;
+}
+.inbox-note p { font-size: 10.5px; color: var(--faint); letter-spacing: .03em; }
+
+/* ---------- memory ---------- */
+.memory-toolbar .search-line { display: flex; align-items: center; gap: 8px; width: 260px; border-bottom: 1px solid var(--rule-strong); color: var(--faint); }
+.memory-toolbar .search-line:focus-within { border-color: var(--ink); color: var(--ink); }
+.memory-toolbar input {
+  flex: 1; min-width: 0; height: 32px; border: 0; outline: 0; background: transparent;
+  font-size: 12px;
+}
+.memory-toolbar input::-webkit-search-cancel-button,
+.search-wrap input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.memory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.note {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  padding: 21px 23px 18px; border: 1px solid var(--rule-strong); background: var(--surface);
+}
+.note__top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.note__type { font-size: 8.5px; letter-spacing: .15em; color: var(--accent); }
+.note h3 { font-family: var(--serif); font-size: 19px; line-height: 1.5; font-weight: 600; letter-spacing: -.01em; }
+.note__content { font-size: 11.5px; line-height: 1.8; color: var(--muted); }
+.note__tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.note__tag { font-size: 8.5px; letter-spacing: .05em; color: var(--faint); border: 1px solid var(--rule); padding: 0 5px; }
+.note__foot {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  margin-top: auto; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.note__source { font-size: 8.5px; line-height: 1.6; color: var(--faint); }
+.note__source span { display: block; }
+.note__actions { display: flex; gap: 3px; }
+.memory-empty { grid-column: 1 / -1; }
+
+/* ---------- reviews ---------- */
+.review-stats {
+  display: flex; align-items: baseline; gap: 30px; padding: 14px 0;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); margin-bottom: 32px;
+}
+.review-stat { display: flex; align-items: baseline; gap: 8px; }
+.review-stat strong { font-family: var(--display); font-size: 28px; font-weight: 400; line-height: 1; }
+.review-stat span { font-size: 9.5px; letter-spacing: .08em; color: var(--faint); }
+.review-stat.is-accent strong { color: var(--accent); }
+.review-stat.is-pending strong { color: var(--warning); }
+.pending-review {
+  display: grid; grid-template-columns: 116px minmax(0, 1fr) auto;
+  gap: 24px; align-items: center;
+  padding: 20px 22px; border: 1px solid var(--accent); background: var(--accent-soft);
+  margin-bottom: 38px;
+}
+.pending-review__label { font-size: 8.5px; letter-spacing: .15em; color: var(--accent); }
+.pending-review__label strong { display: block; margin-top: 3px; font-family: var(--serif); font-size: 12px; letter-spacing: .04em; }
+.pending-review h3 { font-family: var(--serif); font-size: 19px; line-height: 1.5; font-weight: 600; }
+.pending-review p { margin-top: 2px; font-size: 10px; color: var(--muted); }
+.review-entry {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr);
+  gap: 22px; padding: 24px 0; border-bottom: 1px solid var(--rule);
+}
+.review-entry:first-of-type { border-top: 0; }
+.review-ledger { margin-top: 0; }
+.review-entry__date { display: flex; flex-direction: column; padding-top: 2px; }
+.review-entry__date strong { font-family: var(--display); font-size: 24px; line-height: 1; font-weight: 400; }
+.review-entry__date span { margin-top: 3px; font-size: 8.5px; letter-spacing: .08em; color: var(--faint); }
+.review-entry__top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.verdict {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; height: 20px; padding: 0 7px;
+  border: 1px solid currentColor; font-size: 9.5px; letter-spacing: .1em;
+}
+.verdict--pass { color: var(--success); }
+.verdict--back { color: var(--accent); }
+.review-entry__task { font-family: var(--serif); font-size: 17px; font-weight: 600; line-height: 1.5; text-align: left; }
+.review-entry__task:hover { color: var(--accent); }
+.review-entry__meta { margin-left: auto; font-size: 9px; letter-spacing: .04em; color: var(--faint); }
+.review-entry blockquote {
+  margin-top: 8px; padding: 2px 0 2px 14px; border-left: 1px solid var(--rule-strong);
+  font-family: var(--serif); font-size: 13.5px; line-height: 1.8; color: var(--ink-2);
+}
+
+/* ---------- drawer ---------- */
+.drawer-shell {
+  position: fixed; inset: 0; z-index: 90; visibility: hidden;
+  pointer-events: none; transition: visibility 0s linear .3s;
+}
+.drawer-shell.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.drawer-backdrop {
+  position: absolute; inset: 0; background: rgba(30, 28, 23, .32);
+  opacity: 0; transition: opacity .26s ease;
+}
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  width: min(540px, 100%); background: var(--surface);
+  border-left: 1px solid var(--ink);
+  box-shadow: var(--shadow);
+  transform: translateX(28px); opacity: 0;
+  transition: transform .3s cubic-bezier(.2,.7,.3,1), opacity .24s ease;
+}
+.drawer-shell.is-open .drawer-backdrop { opacity: 1; }
+.drawer-shell.is-open .drawer { transform: none; opacity: 1; }
+.drawer__inner { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.drawer__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex: none; padding: 17px 28px 14px; border-bottom: 1px solid var(--rule);
+}
+.drawer__eyebrow { display: flex; align-items: center; gap: 9px; font-size: 8.5px; letter-spacing: .16em; color: var(--faint); }
+.drawer__eyebrow .status { font-size: 9px; letter-spacing: .04em; }
+.drawer__scroll { flex: 1; overflow: auto; padding: 24px 28px 46px; overscroll-behavior: contain; }
+.drawer__title {
+  font-family: var(--serif); font-size: 31px; font-weight: 700;
+  line-height: 1.35; letter-spacing: -.025em; margin-bottom: 13px;
+}
+.drawer__lede { font-family: var(--serif); font-size: 13px; line-height: 1.85; color: var(--muted); margin-bottom: 20px; }
+.drawer-meta {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px 25px; padding: 15px 0; margin-bottom: 26px;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule);
+}
+.drawer-meta dt { font-size: 8.5px; letter-spacing: .13em; color: var(--faint); }
+.drawer-meta dd { margin-top: 2px; font-size: 11.5px; line-height: 1.65; color: var(--ink-2); overflow-wrap: anywhere; }
+.drawer-meta dd code { font-family: var(--mono); font-size: 9.5px; }
+.drawer-meta dd button { text-align: left; }
+.drawer-meta dd button:hover { color: var(--accent); }
+.drawer-section { margin-top: 28px; }
+.drawer-section__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  margin-bottom: 10px; padding-top: 9px; border-top: 1px solid var(--rule-strong);
+}
+.drawer-section__head h3 { font-family: var(--serif); font-size: 16px; font-weight: 600; line-height: 1.4; }
+.drawer-section__head h3 .section-no { margin-right: 7px; font-family: var(--mono); font-size: 8px; color: var(--accent); font-weight: 400; vertical-align: super; }
+.drawer-section__head span { font-size: 8.5px; letter-spacing: .1em; color: var(--faint); }
+.drawer-quote {
+  padding: 3px 0 3px 15px; border-left: 2px solid var(--accent);
+  font-family: var(--serif); font-size: 15px; line-height: 1.8; color: var(--ink-2);
+}
+.drawer-quote small { display: block; margin-bottom: 3px; font-family: var(--sans); font-size: 8.5px; letter-spacing: .12em; color: var(--faint); }
+.drawer-text { font-size: 12px; line-height: 1.85; color: var(--ink-2); }
+.drawer-accept {
+  padding: 12px 14px; border: 1px solid var(--rule); background: var(--surface-warm);
+  font-size: 11.5px; line-height: 1.8; color: var(--ink-2);
+}
+.drawer-list { display: flex; flex-direction: column; }
+.drawer-task {
+  display: grid; grid-template-columns: 45px minmax(0, 1fr) auto;
+  gap: 10px; align-items: center; width: 100%; padding: 10px 0;
+  border-bottom: 1px solid var(--rule); text-align: left;
+}
+.drawer-task:hover .drawer-task__title { color: var(--accent); }
+.drawer-task__no { font-family: var(--mono); font-size: 9px; color: var(--faint); }
+.drawer-task__title { font-family: var(--serif); font-size: 13.5px; line-height: 1.5; transition: color .16s ease; }
+.drawer-task__title small { display: block; margin-top: 1px; font-family: var(--sans); font-size: 8.5px; color: var(--faint); }
+.drawer-task .status { font-size: 9px; }
+.drawer-activity { display: flex; flex-direction: column; }
+.drawer-activity li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 10.5px; line-height: 1.65; color: var(--ink-2); }
+.drawer-activity time { font-size: 8.5px; color: var(--faint); }
+.drawer__foot {
+  flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+  padding: 13px 28px; border-top: 1px solid var(--rule-strong); background: var(--surface);
+}
+.drawer__foot .spacer { flex: 1; }
+.drawer__foot .btn { min-height: 32px; }
+.drawer-empty {
+  padding: 20px 16px; border: 1px dashed var(--rule-strong);
+  font-size: 11px; line-height: 1.7; color: var(--faint); text-align: center;
+}
+.drawer-empty strong { display: block; margin-bottom: 3px; font-family: var(--serif); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.attempt {
+  padding: 14px 15px 13px; margin-bottom: 9px;
+  border: 1px solid var(--rule); background: var(--surface-warm);
+}
+.attempt:last-child { margin-bottom: 0; }
+.attempt__head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 7px; }
+.attempt__no { font-family: var(--mono); font-size: 8.5px; color: var(--faint); }
+.attempt__head time { margin-left: auto; font-size: 8.5px; color: var(--faint); }
+.attempt__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
+.attempt__fact { font-size: 9.5px; color: var(--muted); }
+.attempt__fact span { display: block; font-size: 7.5px; letter-spacing: .1em; color: var(--faint); }
+.attempt__fact code { font-family: var(--mono); font-size: 9px; color: var(--ink-2); }
+.attempt__report {
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--rule);
+  font-family: var(--serif); font-size: 12.5px; line-height: 1.75; color: var(--ink-2);
+}
+.attempt__attention {
+  margin-top: 7px; padding: 6px 9px; background: var(--accent-soft);
+  font-size: 9.5px; line-height: 1.6; color: var(--accent-deep);
+}
+.artifact {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--rule);
+}
+.artifact__type { padding-top: 2px; font-size: 8px; letter-spacing: .1em; color: var(--accent); }
+.artifact h4 { font-family: var(--serif); font-size: 13px; font-weight: 600; line-height: 1.5; }
+.artifact p { margin-top: 2px; font-size: 10px; line-height: 1.7; color: var(--muted); }
+.artifact code { display: block; margin-top: 3px; font-family: var(--mono); font-size: 9px; color: var(--faint); overflow-wrap: anywhere; }
+.review-card { padding: 11px 0; border-bottom: 1px solid var(--rule); }
+.review-card__head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.review-card__head time { margin-left: auto; font-size: 8.5px; color: var(--faint); }
+.review-card__by { font-size: 9.5px; color: var(--muted); }
+.review-card blockquote { margin-top: 6px; font-family: var(--serif); font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
+.fold { margin-top: 24px; border-top: 1px solid var(--rule-strong); }
+.fold summary {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; font-family: var(--serif); font-size: 13px; color: var(--muted);
+  cursor: pointer; list-style: none;
+}
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::after { content: "＋"; font-family: var(--sans); font-size: 13px; color: var(--faint); }
+.fold[open] summary::after { content: "－"; }
+.fold__body { padding: 2px 0 6px; }
+.event { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 9.5px; line-height: 1.6; color: var(--muted); }
+.event code { font-family: var(--mono); font-size: 9px; color: var(--ink-2); }
+.event time { color: var(--faint); font-size: 8.5px; }
+
+/* drawer forms */
+.drawer-form { display: flex; flex-direction: column; gap: 18px; }
+.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.drawer-form .field > span { font-size: 9px; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--rule-strong); width: fit-content; }
+.choice { position: relative; display: inline-flex; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 42px; height: 30px; padding: 0 10px;
+  border-right: 1px solid var(--rule); color: var(--muted);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .02em; cursor: pointer;
+}
+.choice:last-child span { border-right: 0; }
+.choice span:hover { background: var(--surface-warm); color: var(--ink); }
+.choice input:checked + span { background: var(--ink); color: var(--paper); }
+.choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+.disclosure { border-top: 1px solid var(--rule); padding-top: 13px; }
+.disclosure summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 10.5px; color: var(--muted); cursor: pointer; list-style: none;
+}
+.disclosure summary::-webkit-details-marker { display: none; }
+.disclosure summary::after { content: "＋"; font-size: 13px; color: var(--faint); }
+.disclosure[open] summary::after { content: "－"; }
+.disclosure[open] summary { margin-bottom: 14px; }
+.disclosure__body { display: flex; flex-direction: column; gap: 14px; }
+.form-context {
+  display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;
+  padding: 11px 13px; background: var(--paper-deep); border-left: 2px solid var(--accent);
+  font-size: 10px; line-height: 1.7; color: var(--muted);
+}
+.form-context b { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- modal / toast ---------- */
+.modal-shell {
+  position: fixed; inset: 0; z-index: 110; display: flex; align-items: center; justify-content: center;
+  padding: 24px; visibility: hidden; pointer-events: none; transition: visibility 0s linear .22s;
+}
+.modal-shell.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(30,28,23,.4); opacity: 0; transition: opacity .22s ease; }
+.modal {
+  position: relative; z-index: 1; width: min(440px, 100%);
+  padding: 28px 30px 24px; border: 1px solid var(--ink); background: var(--surface);
+  box-shadow: var(--shadow); opacity: 0; transform: translateY(7px);
+  transition: opacity .2s ease, transform .24s ease;
+}
+.modal-shell.is-open .modal-backdrop { opacity: 1; }
+.modal-shell.is-open .modal { opacity: 1; transform: none; }
+.modal__eyebrow { margin-bottom: 13px; }
+.modal h2 { font-family: var(--serif); font-size: 26px; line-height: 1.4; font-weight: 700; letter-spacing: -.02em; }
+.modal p { margin-top: 10px; font-size: 11.5px; line-height: 1.8; color: var(--muted); }
+.modal p strong { color: var(--ink-2); font-weight: 600; }
+.modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.toast {
+  position: fixed; left: 40px; bottom: 34px; z-index: 150;
+  max-width: min(520px, calc(100vw - 40px));
+  padding: 10px 18px; background: var(--ink); color: var(--paper);
+  font-size: 11.5px; letter-spacing: .03em;
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .2s ease, transform .24s ease;
+}
+.toast.is-visible { opacity: 1; transform: none; }
+body.is-locked .toast { bottom: 92px; }
+
+/* ---------- colophon ---------- */
+.colophon {
+  max-width: 1240px; margin: 0 auto; padding: 20px 40px 34px;
+  border-top: 1px solid var(--rule-strong);
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  font-size: 8.5px; letter-spacing: .1em; color: var(--faint);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .overview-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 36px; }
+  .project-switch__name { display: none; }
+  .task-row { grid-template-columns: 44px minmax(0, 1fr) 118px 22px; gap: 14px; }
+}
+@media (max-width: 980px) {
+  .masthead__row { grid-template-columns: 1fr auto; }
+  .masthead__date { display: none; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .overview-side { padding-left: 0; border-left: 0; padding-top: 10px; border-top: 1px solid var(--rule); }
+  .overview-side .toc { margin-top: 24px; }
+  .cover-grid { grid-template-columns: 1fr; }
+  .project-band { grid-template-columns: 230px minmax(0, 1fr); }
+  .brief__facts { grid-template-columns: 1fr; gap: 10px; }
+  .boundary { grid-template-columns: 1fr; gap: 20px; }
+  .letter { grid-template-columns: 120px minmax(0, 1fr); }
+  .letter__actions { grid-column: 2; flex-direction: row; }
+  .memory-grid { grid-template-columns: 1fr; }
+  .nav__item { padding: 0 10px; }
+  .nav__item:first-child { padding-left: 0; }
+  .nav__item[aria-current="page"]::after { left: 10px; right: 10px; }
+  .nav__item:first-child[aria-current="page"]::after { left: 0; }
+  .page-head__row { grid-template-columns: auto minmax(0, 1fr); }
+  .page-head__aside { display: none; }
+}
+@media (max-width: 760px) {
+  .masthead__inner, .page-shell, .colophon { padding-left: 20px; padding-right: 20px; }
+  .masthead__row { gap: 12px; min-height: 60px; }
+  .wordmark__en { display: none; }
+  .masthead__tools { gap: 10px; }
+  .masthead__tools > .btn { padding: 0 10px; }
+  .search-wrap { width: 120px; border-bottom-color: var(--rule-strong); }
+  .search-wrap input { display: block; font-size: 11px; }
+  .search-wrap kbd { display: none; }
+  .masthead__nav { flex-wrap: wrap; padding-bottom: 6px; }
+  .nav { flex-wrap: wrap; min-height: 42px; }
+  .nav__item { padding: 0 10px; font-size: 12px; }
+  .nav__item:nth-child(6), .nav__item:nth-child(7) { }
+  .project-switch { padding-left: 0; border-left: 0; margin-left: auto; }
+  .project-switch__label { display: none; }
+  .project-popover { right: 0; width: min(340px, calc(100vw - 40px)); }
+  .page-head { padding-top: 28px; }
+  .page-head h1 { font-size: 42px; }
+  .page-head__row { display: block; }
+  .page-head__standfirst { margin-top: 12px; }
+  .project-band, .project-band--compact { grid-template-columns: 1fr; }
+  .project-band__cover, .project-band--compact .project-band__cover { min-height: 126px; border-right: 0; border-bottom: 1px solid var(--rule-strong); }
+  .project-band__body, .project-band--compact .project-band__body { padding: 20px; }
+  .project-band__code { font-size: 46px; }
+  .band-stats { display: flex; }
+  .band-foot__meta { align-items: flex-start; text-align: left; }
+  .band-foot__meta code { display: none; }
+  .lede { grid-template-columns: 1fr; gap: 8px; }
+  .lede p { font-size: 17.5px; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .metric { padding: 14px 16px; border-top: 1px solid var(--rule); }
+  .metric:nth-child(-n+2) { border-top: 0; }
+  .metric:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .page-head__standfirst, .project-band__line { font-size: 13px; }
+  .brief { grid-template-columns: 1fr; }
+  .brief__rail { flex-direction: row; align-items: center; gap: 12px; padding: 13px 18px; border-right: 0; border-bottom: 1px solid var(--rule); }
+  .brief__no small { display: inline; margin-left: 4px; }
+  .brief__rail .status { margin-top: 0; margin-left: auto; }
+  .brief__body { padding: 16px 18px 0; }
+  .brief__foot { margin: 0 -18px; padding: 10px 18px; }
+  .brief h3 { font-size: 21px; }
+  .brief__updated { width: 100%; margin-left: 0; }
+  .split { padding: 18px; }
+  .split__head { display: block; }
+  .split__head p { text-align: left; margin-top: 6px; }
+  .split__grid { grid-template-columns: 1fr; }
+  .split__foot { align-items: flex-start; flex-direction: column; }
+  .task-row { grid-template-columns: 38px minmax(0, 1fr) 20px; gap: 10px; padding: 13px 14px; }
+  .task-row__side { grid-column: 2; flex-direction: row; align-items: center; gap: 10px; margin-top: 2px; }
+  .task-row__arrow { grid-row: 1; grid-column: 3; }
+  .task-group__meta { width: 100%; margin-left: 0; }
+  .letter { grid-template-columns: 1fr; gap: 12px; padding: 20px 0; }
+  .letter__meta { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 9px; }
+  .letter__quote { font-size: 17px; }
+  .letter__actions { grid-column: 1; }
+  .inbox-note { align-items: flex-start; }
+  .letter__actions .btn { flex: 1; }
+  .memory-toolbar { align-items: flex-start; }
+  .memory-toolbar .search-line { width: 100%; }
+  .pending-review { grid-template-columns: 1fr; gap: 12px; }
+  .review-entry { grid-template-columns: 1fr; gap: 8px; }
+  .review-entry__date { flex-direction: row; align-items: baseline; gap: 5px; }
+  .review-entry__meta { margin-left: 0; width: 100%; }
+  .drawer__scroll { padding: 20px 20px 40px; }
+  .drawer { width: 100%; }
+  .drawer__head, .drawer__foot { padding-left: 20px; padding-right: 20px; }
+  .drawer__title { font-size: 27px; }
+  .page-head__aside { display: none; }
+  .toast { left: 20px; bottom: 20px; max-width: calc(100vw - 40px); }
+  body.is-locked .toast { bottom: 88px; }
+  .colophon { padding-top: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#page">跳到正文</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <div class="masthead__row">
+      <button class="wordmark" type="button" data-nav="overview" aria-label="回到概览">
+        <span class="wordmark__cn">雄大工作台</span>
+        <span class="wordmark__en">XIONGDA WORKBENCH</span>
+      </button>
+      <div class="masthead__date">第 47 期 · 2026 年 11 月 18 日 · 周三</div>
+      <div class="masthead__tools">
+        <div class="search-wrap">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.8" stroke="currentColor" stroke-width="1.2"/><path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.2"/></svg>
+          <input id="globalSearch" type="search" placeholder="检索需求与任务" aria-label="在当前项目中检索需求与任务" autocomplete="off">
+          <kbd>/</kbd>
+          <div class="search-results" id="searchResults" hidden></div>
+        </div>
+        <button class="btn btn--primary btn--sm" type="button" data-action="new-requirement">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.3"/></svg>
+          新建需求
+        </button>
+      </div>
+    </div>
+    <div class="masthead__nav">
+      <nav class="nav" aria-label="主导航">
+        <button class="nav__item" type="button" data-nav="overview"><span class="nav__no">01</span>概览</button>
+        <button class="nav__item" type="button" data-nav="projects"><span class="nav__no">02</span>项目</button>
+        <button class="nav__item" type="button" data-nav="requirements"><span class="nav__no">03</span>需求<span class="nav__count" data-nav-count="requirements"></span></button>
+        <button class="nav__item" type="button" data-nav="tasks"><span class="nav__no">04</span>任务<span class="nav__count" data-nav-count="tasks"></span></button>
+        <button class="nav__item" type="button" data-nav="inbox"><span class="nav__no">05</span>收件箱<span class="nav__count" data-nav-count="inbox"></span></button>
+        <button class="nav__item" type="button" data-nav="memory"><span class="nav__no">06</span>记忆</button>
+        <button class="nav__item" type="button" data-nav="reviews"><span class="nav__no">07</span>评审</button>
+      </nav>
+      <div class="project-switch">
+        <button class="project-switch__btn" type="button" data-toggle-projects aria-haspopup="true" aria-expanded="false" aria-controls="projectPopover">
+          <span class="project-switch__label">当前项目</span>
+          <span class="project-switch__code" id="switchCode">DEMO</span>
+          <span class="project-switch__name" id="switchName">演示项目 · 账单系统</span>
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+        <div class="project-popover" id="projectPopover" hidden></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page-shell" id="main">
+  <div id="page"></div>
+</main>
+
+<footer class="colophon">
+  <span>雄大工作台 · 杂志式工作台提案 / EDITORIAL WORKSPACE</span>
+  <span>模拟数据 · DEMO &amp; NEW_CENTER_APP · 2026</span>
+</footer>
+
+<div class="drawer-shell" id="drawerShell" aria-hidden="true">
+  <div class="drawer-backdrop" data-close-drawer></div>
+  <aside class="drawer" id="drawerPanel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <div class="drawer__inner" id="drawerInner"></div>
+  </aside>
+</div>
+
+<div class="modal-shell" id="modalShell" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal" id="modalPanel" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Mock data — mirrors src/xg/domain.ts vocabulary
+   ============================================================ */
+const DATA = {
+  projects: [
+    {
+      id: 'prj_demo', shortCode: 'DEMO', name: '演示项目 · 账单系统',
+      tagline: '账期、对账与开票，一条从财务到客户的链路。',
+      description: '承载账单系统核心流程：账期生成、客户对账、调账留痕与发票状态同步。当前迭代聚焦月末对账的可解释性。',
+      status: '活跃', sensitivity: '内部', rootPath: 'G:\\work\\demo-billing',
+      updatedAt: '今天 09:42',
+      lede: '月末对账进入收口。两条需求等待确认，一条阻塞停在发票回调的时序上——今天的决定，会直接影响本周能否封版。'
+    },
+    {
+      id: 'prj_center', shortCode: 'NEW_CENTER_APP', name: '中心应用',
+      tagline: '多个子应用，共用一套登录、导航与权限。',
+      description: '内部工具的入口层，负责统一会话、导航编排与审计。当前迭代处理子应用之间的登录态同步与移动端首屏。',
+      status: '活跃', sensitivity: '机密', rootPath: 'G:\\work\\new-center-app',
+      updatedAt: '昨天 22:18',
+      lede: '中心应用本周的关键在会话一致性。登录态同步仍待确认，移动端任务停在断点规范缺失上；先把边界定下来，再推进实现。'
+    }
+  ],
+
+  requirements: [
+    {
+      id: 'req_demo_41', projectId: 'prj_demo', seqNo: 41,
+      title: '对账单导出支持按客户拆分', status: '待确认', priority: 'P1',
+      description: '导出对账单时，按客户生成独立文件，并保留总表作为核对基准。文件名需带客户简称与账期，减少财务手工裁剪。',
+      sourceNote: '企微 · 财务 王倩：“月底对账时，客户要各自的账单，现在只能导一张总表，再手工裁。”',
+      acceptance: '同一账期可按客户导出多个文件；各文件金额合计与总表一致；文件名含客户简称与账期。',
+      latest: '王倩补充了 3 家客户示例', updatedAt: '今天 09:12', createdAt: '11 月 17 日',
+      activity: [
+        { at: '今天 09:12', text: '王倩在企微补充了 3 家客户示例。' },
+        { at: '昨天 17:36', text: '收件箱转入，来源标注为「月末对账」。' }
+      ]
+    },
+    {
+      id: 'req_demo_40', projectId: 'prj_demo', seqNo: 40,
+      title: '账单详情增加调整记录', status: '已拆分', priority: 'P1',
+      description: '在账单详情展示每一次金额调整：谁改的、为什么改、改前改后各是多少。只读，不提供编辑入口。',
+      sourceNote: '电话 · 客服 周明：“客户问上个月金额为什么变了，我们只能翻聊天记录。”',
+      acceptance: '每次调账显示操作人、原因、调整前后金额；按时间倒序；记录不可删除。',
+      latest: '任务 #119 提交验收', updatedAt: '昨天 18:40', createdAt: '11 月 14 日',
+      activity: [
+        { at: '昨天 18:40', text: '任务 #119 提交验收，附 12 项测试通过。' },
+        { at: '昨天 14:02', text: '任务 #118 完成并归档设计说明。' },
+        { at: '11 月 15 日', text: '林岚拆出 3 个任务。' }
+      ]
+    },
+    {
+      id: 'req_demo_39', projectId: 'prj_demo', seqNo: 39,
+      title: '逾期提醒支持二次触达', status: '已确认', priority: 'P2',
+      description: '账单逾期第 3 天与第 7 天各发送一次提醒，第二次文案更直接，并提供退订入口。',
+      sourceNote: '邮箱 · 运营 陈序：“第一次提醒后，仍有近三成客户没有处理。”',
+      acceptance: '逾期 3 天与 7 天各触达一次；同账期不重复发送；退订后不再触达。',
+      latest: '林岚确认了触达节奏', updatedAt: '11 月 17 日 14:02', createdAt: '11 月 12 日',
+      activity: [
+        { at: '11 月 17 日 14:02', text: '林岚确认了 3 天 / 7 天的触达节奏。' },
+        { at: '11 月 16 日', text: '陈序补充了退订率数据。' }
+      ]
+    },
+    {
+      id: 'req_demo_38', projectId: 'prj_demo', seqNo: 38,
+      title: '发票状态与账单状态对齐', status: '已拆分', priority: 'P0',
+      description: '以发票服务的最终状态为准，反向同步账单的待开票 / 已开票 / 已作废状态，并记录来源事件。',
+      sourceNote: '同事 · 交付 李哲：“发票作废后，账单还显示已开票，客户以为我们重复开票。”',
+      acceptance: '发票作废后账单回到待开票；双端状态差异 1 分钟内消解；每次同步可追溯。',
+      latest: '任务 #115 标记阻塞，等待回调顺序说明', updatedAt: '今天 08:05', createdAt: '11 月 11 日',
+      activity: [
+        { at: '今天 08:05', text: '任务 #115 标记阻塞，等待发票服务回调顺序说明。' },
+        { at: '昨天 17:10', text: '赵敏退回了 #115 的根因评审，要求补确定性证据。' },
+        { at: '11 月 16 日', text: '任务 #116 完成状态机改造，进入评审。' }
+      ]
+    },
+    {
+      id: 'req_demo_37', projectId: 'prj_demo', seqNo: 37,
+      title: '月度报表加载速度优化', status: '已关闭', priority: 'P3',
+      description: '缩短月度报表首屏时间，先返回汇总数字，明细按需加载。',
+      sourceNote: '人工 · 产品 林岚：“报表首屏超过 8 秒，财务同事已经改用导出。”',
+      acceptance: '首屏 2 秒内可见汇总；明细加载不阻塞首屏；慢查询有日志。',
+      latest: '并入 #036 的合并方案，关闭', updatedAt: '11 月 15 日 17:20', createdAt: '10 月 28 日',
+      activity: [{ at: '11 月 15 日 17:20', text: '需求关闭，遗留查询问题并入 #036。' }]
+    },
+    {
+      id: 'req_demo_36', projectId: 'prj_demo', seqNo: 36,
+      title: '客户合并后的账单归属', status: '待确认', priority: 'P2',
+      description: '客户主档合并时，历史账单与未结余额一并迁移到主客户，保留原客户引用以便追溯。',
+      sourceNote: '企微 · 财务 王倩：“两个客户合并后，历史账单还挂在旧客户下面，对账时找不到。”',
+      acceptance: '合并后历史账单归到主客户；原客户编号仍可检索；未结余额不重复计算。',
+      latest: '来源补充：涉及 2 个合并客户', updatedAt: '11 月 16 日 10:30', createdAt: '11 月 13 日',
+      activity: [{ at: '11 月 16 日 10:30', text: '王倩补充了 2 个已合并客户作为样本。' }]
+    },
+    {
+      id: 'req_center_12', projectId: 'prj_center', seqNo: 12,
+      title: '统一登录态在子应用间同步', status: '待确认', priority: 'P0',
+      description: '以中心应用的会话为准，子应用订阅登录态变化；退出、过期、切换账号都要即时广播。',
+      sourceNote: '同事 · 平台 赵敏：“在报表里退出后，导航还显示已登录，切回去又自动登录了。”',
+      acceptance: '任一子应用退出后 3 秒内全部登出；过期回跳保留原路径；切换账号不残留旧身份。',
+      latest: '赵敏补充了复现录屏', updatedAt: '今天 08:26', createdAt: '11 月 17 日',
+      activity: [{ at: '今天 08:26', text: '赵敏补充了 42 秒复现录屏，退出与回跳各一次。' }]
+    },
+    {
+      id: 'req_center_11', projectId: 'prj_center', seqNo: 11,
+      title: '工作台导航支持自定义分组', status: '已拆分', priority: 'P2',
+      description: '允许用户把常用入口拖入自定义分组，分组顺序和个人配置跟随账号。',
+      sourceNote: '邮箱 · 行政 吴桐：“工具太多，每个人常用的不一样，能不能自己分组？”',
+      acceptance: '可新建、重命名、排序分组；配置跨设备生效；无权限入口不显示。',
+      latest: '任务 #206 提交验收', updatedAt: '昨天 16:10', createdAt: '11 月 8 日',
+      activity: [{ at: '昨天 16:10', text: '任务 #206 提交验收，附桌面与窄屏截图。' }]
+    },
+    {
+      id: 'req_center_10', projectId: 'prj_center', seqNo: 10,
+      title: '权限变更审计导出', status: '已确认', priority: 'P1',
+      description: '按时间范围导出权限授予、回收与角色变更，包含操作人、对象、前后角色与来源 IP。',
+      sourceNote: '人工 · 安全 沈屿：“季度审计需要导出过去 90 天的权限变更记录。”',
+      acceptance: '可导出 CSV；字段齐全；导出动作本身进入审计。',
+      latest: '沈屿确认了字段清单', updatedAt: '11 月 17 日 11:48', createdAt: '11 月 6 日',
+      activity: [{ at: '11 月 17 日 11:48', text: '沈屿确认了 9 个导出字段，增加来源 IP。' }]
+    },
+    {
+      id: 'req_center_9', projectId: 'prj_center', seqNo: 9,
+      title: '移动端适配首屏', status: '已关闭', priority: 'P3',
+      description: '窄屏下将导航收纳为抽屉，首屏优先展示最近使用与待办。',
+      sourceNote: '电话 · 行政 吴桐：“在手机上打开中心应用，导航把内容全挤到下面了。”',
+      acceptance: '375px 宽度可用；导航可开合；首屏无需横向滚动。',
+      latest: '并入 #011 导航重构，关闭', updatedAt: '11 月 14 日 15:00', createdAt: '10 月 30 日',
+      activity: [{ at: '11 月 14 日 15:00', text: '需求关闭，断点规范并入导航重构。' }]
+    }
+  ],
+
+  tasks: [
+    {
+      id: 'task_demo_118', projectId: 'prj_demo', requirementId: 'req_demo_40', seqNo: 118,
+      title: '设计调账记录的数据结构与接口', type: '设计', status: '完成', priority: 'P2',
+      acceptance: '字段覆盖操作人、原因、调整前后金额与关联账单；接口只读。',
+      currentAttemptId: 'a_6b21', autoDispatch: false, updatedAt: '11 月 16 日 18:10',
+      acceptedBy: '赵敏', acceptedAt: '11 月 16 日 18:10', completedAt: '11 月 16 日 18:10',
+      description: '为调账时间线与详情查询确定只读模型。',
+      attempts: [{
+        id: 'a_6b21', status: '结束', stage: '设计评审', workerSessionId: 'sess_38fa',
+        createdAt: '11 月 15 日 10:12', lastReportAt: '11 月 16 日 17:40', tokenCost: '42k',
+        report: '数据模型与接口草案完成，覆盖审计字段；评审意见已回填。', attention: null
+      }],
+      artifacts: [{
+        type: '文档', title: '调账记录数据模型 v2', uri: 'docs/billing/adjustment-model.md',
+        content: 'adjustment：操作人 / 原因 / 前后金额 / 关联账单 / 来源事件。', createdAt: '11 月 16 日 17:30'
+      }],
+      events: [
+        { eventType: 'review.passed', actor: '赵敏', createdAt: '11 月 16 日 18:20' },
+        { eventType: 'task.accepted', actor: '赵敏', createdAt: '11 月 16 日 18:10' },
+        { eventType: 'spec.approved', actor: '林岚', createdAt: '11 月 15 日 09:50' }
+      ]
+    },
+    {
+      id: 'task_demo_119', projectId: 'prj_demo', requirementId: 'req_demo_40', seqNo: 119,
+      title: '实现调账记录写入与查询', type: '开发', status: '待验收', priority: 'P1',
+      acceptance: '调账事务与主账单写入同事务；查询按时间倒序；接口只读。',
+      currentAttemptId: 'a_9f2', autoDispatch: true, updatedAt: '昨天 18:40',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '实现调账记录落库、查询接口与权限校验。',
+      attempts: [
+        {
+          id: 'a_9f2', status: '结束', stage: '验收', workerSessionId: 'sess_2b71',
+          createdAt: '11 月 16 日 14:20', lastReportAt: '今天 10:24', tokenCost: '86k',
+          report: 'MR !482 已合并；12 项单测与 2 项集成测试通过，查询计划走时间索引。', attention: null
+        },
+        {
+          id: 'a_3d18', status: '结束', stage: '实现', workerSessionId: 'sess_1a90',
+          createdAt: '11 月 16 日 09:05', lastReportAt: '11 月 16 日 13:48', tokenCost: '51k',
+          report: '首版实现完成，等待集成测试数据。', attention: null
+        }
+      ],
+      artifacts: [
+        {
+          type: '证据', title: '测试报告', uri: 'reports/task-119-tests.txt',
+          content: '单测 12/12 通过；集成 2/2 通过；查询 12ms（P95）。', createdAt: '昨天 18:32'
+        },
+        {
+          type: '文档', title: '调账接口变更说明', uri: 'docs/api/adjustment.md',
+          content: 'GET /bills/:id/adjustments 返回只读时间线。', createdAt: '昨天 17:55'
+        }
+      ],
+      events: [
+        { eventType: 'review.passed', actor: '赵敏', createdAt: '昨天 19:05' },
+        { eventType: 'task.submitted', actor: '执行器', createdAt: '昨天 18:40' },
+        { eventType: 'artifact.added', actor: '执行器', createdAt: '昨天 18:32' }
+      ]
+    },
+    {
+      id: 'task_demo_120', projectId: 'prj_demo', requirementId: 'req_demo_40', seqNo: 120,
+      title: '账单详情展示调账时间线', type: '开发', status: '进行中', priority: 'P2',
+      acceptance: '按时间倒序展示；空状态说明「本期无调账」；移动端不横向溢出。',
+      currentAttemptId: 'a_77c', autoDispatch: true, updatedAt: '今天 09:58',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '在账单详情右侧加入调账时间线，金额差异用等宽数字强调。',
+      attempts: [{
+        id: 'a_77c', status: '运行中', stage: '实现', workerSessionId: 'sess_61cc',
+        createdAt: '今天 08:10', lastReportAt: '今天 09:58', tokenCost: '18k',
+        report: '已接入时间线组件，等待后端分页参数确认。', attention: null
+      }],
+      artifacts: [{
+        type: '证据', title: '时间线截图 · 空状态', uri: 'shots/task-120-empty.png',
+        content: '空状态与两条记录状态均已截图。', createdAt: '今天 09:40'
+      }],
+      events: [
+        { eventType: 'task.dispatched', actor: '系统', createdAt: '今天 08:10' },
+        { eventType: 'attempt.reported', actor: '执行器', createdAt: '今天 09:58' }
+      ]
+    },
+    {
+      id: 'task_demo_115', projectId: 'prj_demo', requirementId: 'req_demo_38', seqNo: 115,
+      title: '复现发票作废后的状态漂移', type: '排障', status: '阻塞', priority: 'P0',
+      acceptance: '稳定复现作废后账单仍显示已开票；记录回调顺序与时序日志。',
+      currentAttemptId: 'a_2c8e', autoDispatch: false, updatedAt: '今天 08:05',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '定位发票作废回调与账单重算之间的顺序问题。',
+      attempts: [
+        {
+          id: 'a_2c8e', status: '失败', stage: '根因验证', workerSessionId: 'sess_9ac1',
+          createdAt: '昨天 15:10', lastReportAt: '今天 08:05', tokenCost: '124k',
+          report: '作废回调先于账单重算触发，读取到旧状态。需要确认发票服务是否保证回调顺序。',
+          attention: '等待发票服务确认回调顺序'
+        },
+        {
+          id: 'a_1b44', status: '结束', stage: '取证', workerSessionId: 'sess_4e20',
+          createdAt: '昨天 10:00', lastReportAt: '昨天 14:20', tokenCost: '37k',
+          report: '抓取 3 次作废请求与回调时间线，差异稳定出现在 8–12 秒窗口。', attention: null
+        }
+      ],
+      artifacts: [
+        {
+          type: '证据', title: '回调时序日志', uri: 'evidence/invoice-callback-order.log',
+          content: 'invoice.voided 12:04:08 → bill.recalculate 12:04:16 → bill.state=issued',
+          createdAt: '昨天 14:18'
+        },
+        {
+          type: '代码', title: 'invoice-sync 状态读取位置', uri: 'src/billing/invoice-sync.ts:88',
+          content: 'readState() 在事务外执行，可能读到重算前的快照。', createdAt: '昨天 16:30'
+        },
+        {
+          type: '复盘', title: '发票状态漂移复盘（初稿）', uri: 'docs/reviews/invoice-drift.md',
+          content: '两类假设：回调失序、事务读隔离。当前证据只支持前者。', createdAt: '昨天 17:00'
+        }
+      ],
+      events: [
+        { eventType: 'task.blocked', actor: '执行器', createdAt: '今天 08:05' },
+        { eventType: 'review.returned', actor: '赵敏', createdAt: '昨天 17:10' },
+        { eventType: 'task.retried', actor: '系统', createdAt: '昨天 15:10' }
+      ]
+    },
+    {
+      id: 'task_demo_116', projectId: 'prj_demo', requirementId: 'req_demo_38', seqNo: 116,
+      title: '对齐发票与账单状态机', type: '开发', status: '评审', priority: 'P1',
+      acceptance: '作废后可回滚；同步幂等；状态变化全部留痕。',
+      currentAttemptId: 'a_c31', autoDispatch: false, updatedAt: '今天 07:50',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '改造账单状态机，补齐作废回滚分支与幂等键。',
+      attempts: [{
+        id: 'a_c31', status: '结束', stage: '评审', workerSessionId: 'sess_72bd',
+        createdAt: '11 月 16 日 13:00', lastReportAt: '今天 07:50', tokenCost: '73k',
+        report: '状态机改造完成，新增作废回滚分支；等待评审确认幂等边界。', attention: null
+      }],
+      artifacts: [{
+        type: '证据', title: '状态迁移测试', uri: 'reports/invoice-state-machine.txt',
+        content: '已覆盖 9 条迁移路径，作废回滚 2 条通过。', createdAt: '今天 07:40'
+      }],
+      events: [
+        { eventType: 'task.submitted', actor: '执行器', createdAt: '今天 07:50' },
+        { eventType: 'artifact.added', actor: '执行器', createdAt: '今天 07:40' }
+      ]
+    },
+    {
+      id: 'task_demo_121', projectId: 'prj_demo', requirementId: 'req_demo_39', seqNo: 121,
+      title: '配置逾期提醒的触达节奏', type: '开发', status: '就绪', priority: 'P2',
+      acceptance: '第 3 / 7 天各一次；同账期幂等；退订后不再触达。',
+      currentAttemptId: null, autoDispatch: false, updatedAt: '11 月 17 日 15:10',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '增加触达规则配置与幂等键。',
+      attempts: [], artifacts: [], events: []
+    },
+    {
+      id: 'task_demo_122', projectId: 'prj_demo', requirementId: 'req_demo_39', seqNo: 122,
+      title: '二次触达文案与退订入口', type: '设计', status: '就绪', priority: 'P3',
+      acceptance: '短信与邮件文案一致；退订链接可用；不出现催促性措辞。',
+      currentAttemptId: null, autoDispatch: false, updatedAt: '11 月 17 日 15:12',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '第二次提醒的语气更直接，但保留退订。',
+      attempts: [], artifacts: [], events: []
+    },
+    {
+      id: 'task_demo_112', projectId: 'prj_demo', requirementId: 'req_demo_37', seqNo: 112,
+      title: '报表查询分页与汇总拆分', type: '开发', status: '完成', priority: 'P3',
+      acceptance: '汇总先返回；明细分页；慢查询记录日志。',
+      currentAttemptId: 'a_0a1', autoDispatch: false, updatedAt: '11 月 15 日 16:20',
+      acceptedBy: '林岚', acceptedAt: '11 月 15 日 16:20', completedAt: '11 月 15 日 16:20',
+      description: '拆分汇总与明细查询。',
+      attempts: [{
+        id: 'a_0a1', status: '结束', stage: '验收', workerSessionId: 'sess_0d13',
+        createdAt: '11 月 14 日 09:00', lastReportAt: '11 月 15 日 15:10', tokenCost: '64k',
+        report: '汇总查询降至 1.2 秒，明细按页加载。', attention: null
+      }],
+      artifacts: [{
+        type: '证据', title: '查询耗时对比', uri: 'reports/report-perf.txt',
+        content: '首屏 8.4s → 1.2s；明细 P95 320ms。', createdAt: '11 月 15 日 14:50'
+      }],
+      events: [{ eventType: 'task.accepted', actor: '林岚', createdAt: '11 月 15 日 16:20' }]
+    },
+    {
+      id: 'task_demo_113', projectId: 'prj_demo', requirementId: 'req_demo_37', seqNo: 113,
+      title: '汇总查询增加缓存', type: '开发', status: '完成', priority: 'P3',
+      acceptance: '缓存 60 秒；账期变更后主动失效。',
+      currentAttemptId: 'a_5ee', autoDispatch: false, updatedAt: '11 月 15 日 12:10',
+      acceptedBy: '林岚', acceptedAt: '11 月 15 日 12:10', completedAt: '11 月 15 日 12:10',
+      description: '为月度汇总增加短时缓存。',
+      attempts: [{
+        id: 'a_5ee', status: '结束', stage: '验收', workerSessionId: 'sess_5ca0',
+        createdAt: '11 月 14 日 14:00', lastReportAt: '11 月 15 日 11:30', tokenCost: '29k',
+        report: '缓存命中率 78%，账期变更会主动失效。', attention: null
+      }],
+      artifacts: [], events: []
+    },
+    {
+      id: 'task_demo_114', projectId: 'prj_demo', requirementId: 'req_demo_37', seqNo: 114,
+      title: '首屏骨架与懒加载', type: '开发', status: '取消', priority: 'P3',
+      acceptance: '骨架不闪烁；明细区块懒加载。',
+      currentAttemptId: null, autoDispatch: false, updatedAt: '11 月 15 日 17:20',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '被合并方案取代，停止执行。',
+      attempts: [], artifacts: [], events: [{ eventType: 'task.cancelled', actor: '林岚', createdAt: '11 月 15 日 17:20' }]
+    },
+    {
+      id: 'task_center_204', projectId: 'prj_center', requirementId: 'req_center_12', seqNo: 204,
+      title: '统一会话存储方案', type: '设计', status: '评审', priority: 'P0',
+      acceptance: '明确唯一会话源；覆盖退出、过期与切换账号；给出回滚路径。',
+      currentAttemptId: 'a_5c1', autoDispatch: false, updatedAt: '昨天 21:40',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '比较广播、轮询与共享 Cookie 三种路径。',
+      attempts: [{
+        id: 'a_5c1', status: '结束', stage: '评审', workerSessionId: 'sess_88ad',
+        createdAt: '11 月 16 日 10:30', lastReportAt: '昨天 21:40', tokenCost: '58k',
+        report: '方案文档完成，推荐「中心应用持有会话 + 广播通道」。等待评审。', attention: null
+      }],
+      artifacts: [{
+        type: '文档', title: '会话同步方案 v2', uri: 'docs/center/session-sync-v2.md',
+        content: '中心应用为唯一会话源；子应用通过 BroadcastChannel 订阅。', createdAt: '昨天 21:30'
+      }],
+      events: [{ eventType: 'task.submitted', actor: '执行器', createdAt: '昨天 21:40' }]
+    },
+    {
+      id: 'task_center_205', projectId: 'prj_center', requirementId: 'req_center_11', seqNo: 205,
+      title: '子应用订阅登录态变化', type: '开发', status: '进行中', priority: 'P1',
+      acceptance: '退出广播 3 秒内生效；回跳保留路径；不残留旧身份。',
+      currentAttemptId: 'a_bb2', autoDispatch: true, updatedAt: '今天 09:20',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '在导航与报表两个子应用接入广播通道。',
+      attempts: [{
+        id: 'a_bb2', status: '运行中', stage: '实现', workerSessionId: 'sess_ac41',
+        createdAt: '今天 08:30', lastReportAt: '今天 09:20', tokenCost: '12k',
+        report: '导航已接入，报表侧还需要处理已打开的旧页面。', attention: null
+      }],
+      artifacts: [], events: [{ eventType: 'task.dispatched', actor: '系统', createdAt: '今天 08:30' }]
+    },
+    {
+      id: 'task_center_206', projectId: 'prj_center', requirementId: 'req_center_11', seqNo: 206,
+      title: '导航分组的个人配置接口', type: '开发', status: '待验收', priority: 'P2',
+      acceptance: '分组 CRUD；跨设备同步；无权限入口过滤。',
+      currentAttemptId: 'a_b8d', autoDispatch: false, updatedAt: '昨天 16:10',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '个人分组配置的读写接口。',
+      attempts: [{
+        id: 'a_b8d', status: '结束', stage: '验收', workerSessionId: 'sess_4d12',
+        createdAt: '11 月 16 日 14:30', lastReportAt: '昨天 16:10', tokenCost: '36k',
+        report: '接口与前端联调完成，桌面与窄屏截图已附。', attention: null
+      }],
+      artifacts: [{
+        type: '证据', title: '分组界面截图', uri: 'shots/nav-groups-wide.png',
+        content: '桌面 1440 与 375 宽度各一组，顺序保持一致。', createdAt: '昨天 16:00'
+      }],
+      events: [{ eventType: 'task.submitted', actor: '执行器', createdAt: '昨天 16:10' }]
+    },
+    {
+      id: 'task_center_207', projectId: 'prj_center', requirementId: 'req_center_10', seqNo: 207,
+      title: '导出权限变更 CSV', type: '开发', status: '就绪', priority: 'P1',
+      acceptance: '9 个字段齐全；CSV 可打开；导出本身进入审计。',
+      currentAttemptId: null, autoDispatch: false, updatedAt: '11 月 17 日 12:00',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '实现审计导出的查询与权限。',
+      attempts: [], artifacts: [], events: []
+    },
+    {
+      id: 'task_center_208', projectId: 'prj_center', requirementId: 'req_center_9', seqNo: 208,
+      title: '移动端导航抽屉', type: '设计', status: '阻塞', priority: 'P3',
+      acceptance: '375px 可用；可开合；首屏无横向滚动。',
+      currentAttemptId: 'a_9cc', autoDispatch: false, updatedAt: '昨天 13:10',
+      acceptedBy: null, acceptedAt: null, completedAt: null,
+      description: '窄屏导航抽屉与断点规范。',
+      attempts: [{
+        id: 'a_9cc', status: '失败', stage: '取证', workerSessionId: 'sess_ff21',
+        createdAt: '11 月 16 日 15:00', lastReportAt: '昨天 13:10', tokenCost: '17k',
+        report: '缺少移动端断点规范，无法确定抽屉与底栏的切换阈值。', attention: '等待设计系统提供断点规范'
+      }],
+      artifacts: [], events: [{ eventType: 'task.blocked', actor: '执行器', createdAt: '昨天 13:10' }]
+    }
+  ],
+
+  reviews: [
+    {
+      id: 'rev_1', taskId: 'task_demo_119', decision: '通过', reviewer: '赵敏', createdAt: '昨天 19:05',
+      comments: '实现与规格一致；查询计划已确认走时间索引，测试覆盖足够。'
+    },
+    {
+      id: 'rev_2', taskId: 'task_demo_115', decision: '退回', reviewer: '赵敏', createdAt: '昨天 17:10',
+      comments: '根因还停在假设。先补回调顺序的确定性证据，再谈修复。'
+    },
+    {
+      id: 'rev_3', taskId: 'task_demo_118', decision: '通过', reviewer: '赵敏', createdAt: '11 月 16 日 18:20',
+      comments: '数据结构覆盖了审计所需字段，接口粒度合适，可以交付。'
+    },
+    {
+      id: 'rev_4', taskId: 'task_center_206', decision: '通过', reviewer: '沈屿', createdAt: '11 月 17 日 16:40',
+      comments: '窄屏截图说明清楚；无权限入口过滤已覆盖。'
+    }
+  ],
+
+  inbox: [
+    {
+      id: 'inbox_1', projectId: 'prj_demo', channel: '企微', contact: '财务 王倩',
+      rawContext: '月底导出对账单能不能按客户拆开？现在只能导总表再手工裁，三家客户就要弄半小时。',
+      status: '未处理', receivedAt: '今天 08:50'
+    },
+    {
+      id: 'inbox_2', projectId: 'prj_demo', channel: '邮箱', contact: '客户成功 何川',
+      rawContext: '客户问账单金额变化的原因，能不能在详情里看到谁改的、改了多少？',
+      status: '未处理', receivedAt: '昨天 17:12'
+    },
+    {
+      id: 'inbox_3', projectId: 'prj_demo', channel: '电话', contact: '客服 周明',
+      rawContext: '发票作废后客户还能看到已开票，已经有两通投诉了，麻烦尽快看一下。',
+      status: '未处理', receivedAt: '昨天 15:40'
+    },
+    {
+      id: 'inbox_4', projectId: 'prj_center', channel: '同事', contact: '平台 赵敏',
+      rawContext: '在报表子应用退出后，导航还是登录状态，切回去又自动登录，能统一一下吗？',
+      status: '未处理', receivedAt: '今天 08:20'
+    },
+    {
+      id: 'inbox_5', projectId: 'prj_center', channel: '企微', contact: '行政 吴桐',
+      rawContext: '工具入口太多，能不能自己分组，常用的放前面？现在每次都要找半天。',
+      status: '未处理', receivedAt: '11 月 16 日 14:25'
+    }
+  ],
+
+  memory: [
+    {
+      id: 'mem_1', projectId: 'prj_demo', type: '决策', title: '调账记录只读，不提供删除入口',
+      content: '审计要求保留原始调整。UI 只展示时间线与差异，不允许编辑或删除；纠错以新增一条调账完成。',
+      status: '已确认', sourceType: '人工', sourceRef: '评审会 11-12', tags: ['审计', '调账'],
+      updatedAt: '11 月 16 日'
+    },
+    {
+      id: 'mem_2', projectId: 'prj_demo', type: '经验', title: '发票回调不保证顺序',
+      content: '三次复现均出现作废回调早于账单重算。集成侧不能假设回调有序，需要版本号或最终状态轮询兜底。',
+      status: '待复核', sourceType: '任务', sourceRef: '#115', tags: ['发票', '时序'],
+      updatedAt: '昨天 17:20'
+    },
+    {
+      id: 'mem_3', projectId: 'prj_demo', type: '领域', title: '账期与出账日的区别',
+      content: '账期是服务区间，出账日是生成账单的日期。报表筛选按账期，催收按出账日。',
+      status: '已确认', sourceType: '人工', sourceRef: '术语表', tags: ['账单', '术语'],
+      updatedAt: '11 月 10 日'
+    },
+    {
+      id: 'mem_4', projectId: 'prj_demo', type: '故障', title: '报表慢查询集中在客户维度汇总',
+      content: '客户维度聚合缺少组合索引，账期跨度超过 90 天时退化明显。已在 #036 一并处理。',
+      status: '草稿', sourceType: '任务', sourceRef: '#112', tags: ['报表', '性能'],
+      updatedAt: '11 月 15 日'
+    },
+    {
+      id: 'mem_5', projectId: 'prj_demo', type: '交接', title: '账单模块值班交接',
+      content: '发票问题先看 invoice-sync 日志；调账相关看 adjustment 审计表；阻塞任务每天 10:00 同步。',
+      status: '已确认', sourceType: '人工', sourceRef: '值班手册', tags: ['交接'],
+      updatedAt: '11 月 12 日'
+    },
+    {
+      id: 'mem_6', projectId: 'prj_center', type: '决策', title: '中心应用持有唯一会话',
+      content: '子应用不再各自写入登录态。退出与过期由中心应用广播，子应用只订阅。',
+      status: '已确认', sourceType: '人工', sourceRef: '架构评审', tags: ['会话', '架构'],
+      updatedAt: '11 月 16 日'
+    },
+    {
+      id: 'mem_7', projectId: 'prj_center', type: '经验', title: '子应用退出存在竞态',
+      content: '旧页面在收到广播后仍可能用本地缓存恢复身份，需要同时清理内存态与 storage。',
+      status: '待复核', sourceType: '任务', sourceRef: '#204', tags: ['会话', '竞态'],
+      updatedAt: '昨天 22:18'
+    }
+  ]
+};
+
+const FEED = {
+  prj_demo: [
+    { at: '今天 10:24', text: '任务 #119 提交验收，附 12 项测试通过。' },
+    { at: '今天 09:12', text: '王倩在收件箱补充了 3 家客户示例。' },
+    { at: '今天 08:05', text: '任务 #115 标记阻塞，等待发票服务回调说明。' },
+    { at: '昨天 18:40', text: '赵敏通过了 #119 的实现评审。' },
+    { at: '昨天 17:10', text: '赵敏退回 #115 的根因评审。' }
+  ],
+  prj_center: [
+    { at: '今天 08:26', text: '赵敏补充了登录态同步的复现录屏。' },
+    { at: '昨天 22:18', text: '子应用退出竞态写入待复核记忆。' },
+    { at: '昨天 16:10', text: '任务 #206 提交验收，附窄屏截图。' },
+    { at: '昨天 13:10', text: '任务 #208 阻塞，等待断点规范。' },
+    { at: '11 月 17 日', text: '沈屿确认了审计导出的 9 个字段。' }
+  ]
+};
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[char]));
+const pad2 = value => String(value).padStart(2, '0');
+const projectById = id => DATA.projects.find(project => project.id === id);
+const requirementsOf = projectId => DATA.requirements.filter(item => item.projectId === projectId);
+const tasksOf = projectId => DATA.tasks.filter(item => item.projectId === projectId);
+const taskById = id => DATA.tasks.find(item => item.id === id);
+const requirementById = id => DATA.requirements.find(item => item.id === id);
+const tasksForRequirement = id => DATA.tasks.filter(item => item.requirementId === id);
+const reviewsForTask = id => DATA.reviews.filter(item => item.taskId === id);
+const inboxOf = projectId => DATA.inbox.filter(item => item.projectId === projectId && item.status === '未处理');
+const memoryOf = projectId => DATA.memory.filter(item => item.projectId === projectId);
+const activeProject = () => projectById(state.projectId) || DATA.projects[0];
+const shortCode = project => project.shortCode;
+const reqLabel = item => `#${pad2(item.seqNo)}`;
+const taskLabel = item => `#${item.seqNo}`;
+const projectStats = projectId => {
+  const reqs = requirementsOf(projectId);
+  const tasks = tasksOf(projectId);
+  return {
+    requirements: reqs.length,
+    pending: reqs.filter(item => item.status === '待确认').length,
+    tasks: tasks.length,
+    running: tasks.filter(item => item.status === '进行中').length,
+    awaiting: tasks.filter(item => item.status === '待验收').length,
+    review: tasks.filter(item => item.status === '评审').length,
+    blocked: tasks.filter(item => item.status === '阻塞').length,
+    done: tasks.filter(item => item.status === '完成').length,
+    inbox: inboxOf(projectId).length,
+    memory: memoryOf(projectId).length,
+    reviews: DATA.reviews.filter(item => taskById(item.taskId)?.projectId === projectId).length
+  };
+};
+
+const PROJECT_TONE = { '活跃': 'success', '暂停': 'warning', '归档': 'quiet' };
+const REQ_TONE = { '待确认': 'warning', '已确认': 'info', '已拆分': 'success', '已关闭': 'quiet' };
+const TASK_TONE = {
+  '就绪': 'quiet', '进行中': 'info', '评审': 'warning', '待验收': 'warning',
+  '完成': 'success', '阻塞': 'danger', '取消': 'quiet'
+};
+const ATTEMPT_TONE = {
+  '运行中': 'info', '就绪': 'quiet', '阻塞': 'warning', '失败': 'danger', '结束': 'success', '取消': 'quiet'
+};
+const MEMORY_TONE = { '草稿': 'quiet', '待复核': 'warning', '已确认': 'success', '已废弃': 'quiet' };
+const PRIORITY_TONE = { P0: 'danger', P1: 'warning', P2: 'info', P3: 'quiet' };
+
+const statusMarkup = (label, tone, bare = false) =>
+  `<span class="status${bare ? ' status--bare' : ''}" data-tone="${tone || 'quiet'}">${esc(label)}</span>`;
+const priorityMarkup = priority => priority ? `<span class="prio" data-p="${esc(priority)}">${esc(priority)}</span>` : '';
+const projectStatus = project => statusMarkup(project.status, PROJECT_TONE[project.status]);
+const chip = (label, count, active, filter, type) =>
+  `<button class="chip" type="button" data-filter-${type}="${esc(filter)}" aria-pressed="${active}">${esc(label)}<span class="chip__n">${pad2(count)}</span></button>`;
+
+const ICON = {
+  arrow: '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 11L11 3M4.5 3H11v6.5" stroke="currentColor" stroke-width="1.2"/></svg>',
+  close: '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.2"/></svg>',
+  chevron: '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.1"/></svg>',
+  search: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.8" stroke="currentColor" stroke-width="1.2"/><path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.2"/></svg>'
+};
+
+const state = {
+  page: 'overview',
+  projectId: 'prj_demo',
+  reqFilter: '全部',
+  taskFilter: '全部',
+  reviewFilter: '全部',
+  memoryQuery: '',
+  splitId: null,
+  splitDraft: null,
+  drawer: null,
+  reviewOpen: false,
+  drawerReturnFocus: null,
+  modal: null,
+  highlight: null
+};
+
+/* ============================================================
+   Shared view fragments
+   ============================================================ */
+function coverCode(code) {
+  if (code.length > 10 && code.includes('_')) {
+    return code.split('_').map(part => esc(part)).join('<br>');
+  }
+  return esc(code);
+}
+function pageHead(kicker, title, standfirst, aside = '') {
+  return `<header class="page-head">
+    <div class="eyebrow">雄大工作台 / ${esc(kicker)}</div>
+    <div class="page-head__row">
+      <h1>${esc(title)}</h1>
+      <p class="page-head__standfirst">${standfirst}</p>
+      ${aside ? `<div class="page-head__aside">${aside}</div>` : ''}
+    </div>
+  </header>`;
+}
+function projectBand(compact = false) {
+  const project = activeProject();
+  const stats = projectStats(project.id);
+  const index = DATA.projects.findIndex(item => item.id === project.id) + 1;
+  return `<section class="project-band${compact ? ' project-band--compact' : ''}" aria-label="当前项目">
+    <div class="project-band__cover">
+      <div class="cover-rule"><span>PROJECT ${pad2(index)}</span><span>${esc(project.sensitivity)}</span></div>
+      <div class="project-band__code${project.shortCode.length > 10 ? ' is-long' : ''}">${coverCode(project.shortCode)}</div>
+      <div class="project-band__imprint">${esc(project.name)}</div>
+    </div>
+    <div class="project-band__body">
+      <div class="meta-line">
+        ${statusMarkup(project.status, PROJECT_TONE[project.status])}
+        <span class="meta-line__sep"></span>
+        <span>${esc(project.sensitivity)}</span>
+        <span class="meta-line__sep"></span>
+        <span>更新于 ${esc(project.updatedAt)}</span>
+      </div>
+      <h2>${esc(project.name)}</h2>
+      <p class="project-band__line">${esc(compact ? project.tagline : project.description)}</p>
+      <div class="project-band__foot">
+        <dl class="band-stats">
+          <div><dt>需求</dt><dd>${pad2(stats.requirements)}</dd></div>
+          <div><dt>任务</dt><dd>${pad2(stats.tasks)}</dd></div>
+          <div><dt>待验收</dt><dd>${pad2(stats.awaiting)}</dd></div>
+          <div><dt>阻塞</dt><dd>${pad2(stats.blocked)}</dd></div>
+        </dl>
+        <div class="band-foot__meta">
+          <span>根路径 <code>${esc(project.rootPath)}</code></span>
+          <span>收件 ${pad2(stats.inbox)} · 记忆 ${pad2(stats.memory)}</span>
+          <button class="row-button" type="button" data-toggle-projects>切换项目 ${ICON.chevron}</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+function sourceGist(note) {
+  const text = String(note || '');
+  const cut = text.indexOf('：');
+  return cut > 0 ? text.slice(0, cut) : text.slice(0, 26);
+}
+function dateRail(value) {
+  const full = String(value || '');
+  const match = full.match(/11 月 (\d+) 日/);
+  if (match) return { big: match[1], small: '11 月' };
+  if (full.startsWith('今天')) return { big: '今', small: '今天' };
+  if (full.startsWith('昨天')) return { big: '昨', small: '昨天' };
+  return { big: '·', small: full.slice(0, 5) };
+}
+const attemptStage = task => {
+  if (!task.currentAttemptId) return '未派发';
+  switch (task.status) {
+    case '就绪': return '待派发';
+    case '进行中': return '执行中';
+    case '评审': return '评审中';
+    case '待验收': return '待验收';
+    case '完成': return '已结束';
+    case '阻塞': return '阻塞';
+    case '取消': return '已取消';
+    default: return '—';
+  }
+};
+
+/* ============================================================
+   Chrome
+   ============================================================ */
+function renderChrome() {
+  const project = activeProject();
+  const stats = projectStats(project.id);
+  $$('[data-nav]').forEach(button => {
+    if (button.dataset.nav === state.page) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  const counts = { requirements: stats.requirements, tasks: stats.tasks, inbox: stats.inbox };
+  Object.entries(counts).forEach(([key, value]) => {
+    const node = document.querySelector(`[data-nav-count="${key}"]`);
+    if (node) node.textContent = value ? pad2(value) : '';
+  });
+  $('#switchCode').textContent = project.shortCode;
+  $('#switchName').textContent = project.name;
+  $('#projectPopover').innerHTML = `<div class="project-popover__head"><strong>切换项目</strong><span>每个项目独立归档</span></div>
+    <div class="project-popover__list">${DATA.projects.map((item, index) => {
+    const itemStats = projectStats(item.id);
+    const current = item.id === project.id;
+    return `<button class="project-option" type="button" data-project-option="${item.id}">
+      <span class="project-option__code">${coverCode(item.shortCode)}</span>
+      <span>
+        <span class="project-option__name">${esc(item.name)}</span>
+        <span class="project-option__meta">${pad2(index + 1)} · ${esc(item.status)} · ${pad2(itemStats.requirements)} 需求 / ${pad2(itemStats.tasks)} 任务</span>
+      </span>
+      <span class="project-option__check">${current ? '当前' : ''}</span>
+    </button>`;
+  }).join('')}</div>
+    <button class="project-popover__all" type="button" data-nav="projects">
+      <span>管理全部项目</span><span>${ICON.arrow}</span>
+    </button>`;
+  const popover = $('#projectPopover');
+  if (!popover.hidden) {
+    // Rebuilding the options must not collapse the open popover.
+    popover.hidden = false;
+  }
+}
+function renderPage(options = {}) {
+  const preserve = options.preserveScroll === true;
+  const y = window.scrollY;
+  const page = $('#page');
+  page.innerHTML = pageFor(state.page);
+  renderChrome();
+  page.classList.remove('is-entering');
+  if (options.animate !== false) {
+    void page.offsetWidth;
+    page.classList.add('is-entering');
+  }
+  if (preserve) window.scrollTo(0, y);
+  if (state.highlight) {
+    const node = document.querySelector(`[data-req-card="${state.highlight}"]`);
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.style.borderColor = 'var(--accent)';
+      node.style.boxShadow = '0 0 0 3px var(--accent-soft)';
+      window.setTimeout(() => { node.style.borderColor = ''; node.style.boxShadow = ''; }, 1800);
+    }
+    state.highlight = null;
+  }
+}
+function pageFor(page) {
+  switch (page) {
+    case 'overview': return pageOverview();
+    case 'projects': return pageProjects();
+    case 'requirements': return pageRequirements();
+    case 'tasks': return pageTasks();
+    case 'inbox': return pageInbox();
+    case 'memory': return pageMemory();
+    case 'reviews': return pageReviews();
+    default: return pageOverview();
+  }
+}
+function go(page) {
+  if (!['overview', 'projects', 'requirements', 'tasks', 'inbox', 'memory', 'reviews'].includes(page)) return;
+  hideToast();
+  state.page = page;
+  if (page !== 'requirements') {
+    state.splitId = null;
+    state.splitDraft = null;
+  }
+  closeProjectPopover();
+  closeSearch();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  renderPage();
+}
+function switchProject(id) {
+  if (!projectById(id) || id === state.projectId) { closeProjectPopover(); return; }
+  state.projectId = id;
+  state.reqFilter = '全部';
+  state.taskFilter = '全部';
+  state.reviewFilter = '全部';
+  state.memoryQuery = '';
+  state.splitId = null;
+  state.splitDraft = null;
+  closeProjectPopover();
+  closeDrawer(false);
+  renderPage();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  showToast(`已切换到「${activeProject().name}」，需求与任务已按项目重新归档。`);
+}
+function openProjectPopover() {
+  const popover = $('#projectPopover');
+  popover.hidden = false;
+  $('[data-toggle-projects]').setAttribute('aria-expanded', 'true');
+}
+function closeProjectPopover() {
+  const popover = $('#projectPopover');
+  popover.hidden = true;
+  $$('[data-toggle-projects]').forEach(node => node.setAttribute('aria-expanded', 'false'));
+}
+function toggleProjectPopover() {
+  const popover = $('#projectPopover');
+  if (popover.hidden) openProjectPopover(); else closeProjectPopover();
+}
+
+/* ============================================================
+   Overview
+   ============================================================ */
+function pageOverview() {
+  const project = activeProject();
+  const reqs = requirementsOf(project.id);
+  const tasks = tasksOf(project.id);
+  const stats = projectStats(project.id);
+  const decisions = [];
+  reqs.filter(item => item.status === '待确认').forEach(item => decisions.push({
+    kind: '需求', code: `#${pad2(item.seqNo)}`, title: item.title,
+    note: `来源 ${sourceGist(item.sourceNote)} · ${item.updatedAt} 更新`,
+    open: `data-open-req="${item.id}"`,
+    action: `<button class="btn btn--primary btn--sm" type="button" data-confirm-req="${item.id}">确认需求</button>`
+  }));
+  tasks.filter(item => item.status === '待验收').forEach(item => {
+    const requirement = requirementById(item.requirementId);
+    decisions.push({
+      kind: '任务', code: `#${item.seqNo}`, title: item.title,
+      note: `等待验收 · ${requirement ? requirement.title : '未关联需求'} · ${item.updatedAt}`,
+      open: `data-open-task="${item.id}"`,
+      action: `<button class="btn btn--sm" type="button" data-open-task="${item.id}">去验收</button>`
+    });
+  });
+  tasks.filter(item => item.status === '评审').forEach(item => {
+    const requirement = requirementById(item.requirementId);
+    decisions.push({
+      kind: '任务', code: `#${item.seqNo}`, title: item.title,
+      note: `评审中 · ${requirement ? requirement.title : '未关联需求'} · ${item.updatedAt}`,
+      open: `data-open-task="${item.id}"`,
+      action: `<button class="btn btn--sm" type="button" data-open-task="${item.id}">写评审</button>`
+    });
+  });
+  const moving = tasks.filter(item => ['进行中', '评审', '待验收', '阻塞'].includes(item.status)).slice(0, 6);
+  const toc = [
+    { page: 'projects', no: '01', title: '项目', count: DATA.projects.length },
+    { page: 'requirements', no: '02', title: '需求', count: stats.requirements },
+    { page: 'tasks', no: '03', title: '任务', count: stats.tasks },
+    { page: 'inbox', no: '04', title: '收件箱', count: stats.inbox },
+    { page: 'memory', no: '05', title: '记忆', count: stats.memory },
+    { page: 'reviews', no: '06', title: '评审', count: stats.reviews + stats.review }
+  ];
+  const feed = FEED[project.id] || [];
+  return `${pageHead('OVERVIEW · 第 47 期', '概览', '一页看清：什么在推进，什么在等你，什么已经停下。', `<strong>${pad2(stats.pending)}</strong><span>条需求待确认</span>`)}
+    ${projectBand()}
+    <section class="lede" aria-label="卷首">
+      <div class="lede__label">卷首<strong>FROM THE DESK</strong></div>
+      <p>${esc(project.lede)}</p>
+    </section>
+    <div class="metrics" aria-label="项目数字">
+      <div class="metric"><div class="metric__value">${pad2(stats.pending)}</div><div class="metric__label">待确认需求</div><div class="metric__note">需要一次明确的判断</div></div>
+      <div class="metric"><div class="metric__value">${pad2(stats.running)}</div><div class="metric__label">进行中任务</div><div class="metric__note">执行器正在推进</div></div>
+      <div class="metric"><div class="metric__value">${pad2(stats.awaiting)}</div><div class="metric__label">待验收</div><div class="metric__note">证据已齐，等你看过</div></div>
+      <div class="metric"><div class="metric__value">${pad2(stats.blocked)}</div><div class="metric__label">阻塞</div><div class="metric__note">停在外部条件上</div></div>
+    </div>
+    <div class="overview-grid">
+      <div class="overview-main">
+        <section>
+          <div class="section-head"><h2><span class="section-no">01</span>需要你落笔</h2><span class="section-head__aside">${pad2(decisions.length)} 项待决</span></div>
+          ${decisions.length ? decisions.map(item => `<article class="decision">
+            <div class="decision__kind"><span>${item.kind}</span><span class="mono">${item.code}</span></div>
+            <div class="decision__body"><h3><button type="button" ${item.open}>${esc(item.title)}</button></h3><p>${esc(item.note)}</p></div>
+            <div class="decision__action">${item.action}</div>
+          </article>`).join('') : `<div class="empty-state"><strong>没有待决事项</strong><p>确认、验收与评审都已清空。可以去需求页写下一条。</p></div>`}
+        </section>
+        <section>
+          <div class="section-head"><h2><span class="section-no">02</span>正在推进</h2><span class="section-head__aside">${pad2(moving.length)} 个任务在视野内</span></div>
+          ${moving.map(task => {
+            const requirement = requirementById(task.requirementId);
+            return `<button class="front-task" type="button" data-open-task="${task.id}">
+              <span class="front-task__no">#${task.seqNo}</span>
+              <span class="front-task__title">${esc(task.title)}</span>
+              ${statusMarkup(task.status, TASK_TONE[task.status])}
+              <span class="front-task__req">${requirement ? `#${pad2(requirement.seqNo)}` : '—'}</span>
+            </button>`;
+          }).join('')}
+        </section>
+      </div>
+      <aside class="overview-side">
+        <section class="toc">
+          <div class="toc__head"><h2>本期要目</h2><span>CONTENTS · ${esc(project.shortCode)}</span></div>
+          ${toc.map(item => `<button class="toc__item" type="button" data-nav="${item.page}">
+            <span class="toc__no">${item.no}</span><span class="toc__title">${item.title}</span><span class="toc__count">${pad2(item.count)}</span>
+          </button>`).join('')}
+        </section>
+        <section class="feed">
+          <div class="feed__head"><h2>最近活动</h2><span>RECENTLY</span></div>
+          <ol>${feed.map(item => `<li><time>${esc(item.at)}</time><p>${esc(item.text)}</p></li>`).join('')}</ol>
+        </section>
+      </aside>
+    </div>`;
+}
+
+/* ============================================================
+   Projects
+   ============================================================ */
+function projectCover(project) {
+  const stats = projectStats(project.id);
+  const current = project.id === state.projectId;
+  const index = DATA.projects.findIndex(item => item.id === project.id) + 1;
+  return `<article class="project-cover${current ? ' is-current' : ''}">
+    <div class="cover-art${project.shortCode.length > 10 ? ' cover-art--long' : ''}">
+      <div class="cover-art__top"><span>PROJECT ${pad2(index)}</span><span>${statusMarkup(project.status, PROJECT_TONE[project.status], true)}</span></div>
+      <div class="cover-art__code">${coverCode(project.shortCode)}</div>
+      <div class="cover-art__bottom"><strong>${esc(project.name)}</strong><span>${esc(project.sensitivity)}</span></div>
+    </div>
+    <div class="project-cover__body">
+      <div class="project-cover__meta"><span>更新 ${esc(project.updatedAt)}</span>${current ? '<span class="current-stamp">当前项目</span>' : ''}</div>
+      <h2>${esc(project.name)}</h2>
+      <p class="project-cover__desc">${esc(project.tagline)} ${esc(project.description)}</p>
+      <dl class="cover-stats">
+        <div><dt>需求</dt><dd>${pad2(stats.requirements)}</dd></div>
+        <div><dt>任务</dt><dd>${pad2(stats.tasks)}</dd></div>
+        <div><dt>待确认</dt><dd>${pad2(stats.pending)}</dd></div>
+        <div class="cover-stats__danger"><dt>阻塞</dt><dd>${pad2(stats.blocked)}</dd></div>
+      </dl>
+      <div class="project-cover__actions">
+        <button class="btn btn--primary btn--sm" type="button" data-enter-project="${project.id}">${current ? '打开概览' : '进入工作台'} ${ICON.arrow}</button>
+        ${current ? `<button class="btn btn--ghost btn--sm" type="button" data-nav="requirements">看需求</button>` : ''}
+      </div>
+      <div class="project-cover__path">根路径 · ${esc(project.rootPath)}</div>
+    </div>
+  </article>`;
+}
+function pageProjects() {
+  return `${pageHead('PROJECTS · 项目册', '项目', '每个项目有自己的语境。先选一个，再谈需求与任务。', `<strong>${pad2(DATA.projects.length)}</strong><span>个项目在册</span>`)}
+    <div class="projects-toolbar">
+      <div><h2>两本册子，两条工作线</h2><span>项目之间不混合统计，也不共享任务列表。</span></div>
+      <button class="btn btn--sm" type="button" data-action="new-project">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2"/></svg>
+        新建项目
+      </button>
+    </div>
+    <div class="cover-grid">${DATA.projects.map(projectCover).join('')}</div>
+    <section class="boundary">
+      <div>
+        <div class="eyebrow">系统 / 项目</div>
+        <h2>设置分两层，<br>不混在一个页面里。</h2>
+      </div>
+      <div class="boundary__cols">
+        <div class="boundary__col">
+          <h3><span>01</span>项目设置</h3>
+          <p>默认优先级、自动派发与执行器覆盖，只影响当前项目。入口留在项目身份带与项目册里。</p>
+        </div>
+        <div class="boundary__col">
+          <h3><span>02</span>系统设置</h3>
+          <p>模型、账号与全局规则由宿主面板统一管理，不随项目切换，也不出现在业务列表里。</p>
+        </div>
+      </div>
+    </section>`;
+}
+
+/* ============================================================
+   Requirements
+   ============================================================ */
+function requirementBrief(requirement, project) {
+  const tasks = tasksForRequirement(requirement.id);
+  const done = tasks.filter(item => item.status === '完成').length;
+  const splitOpen = state.splitId === requirement.id;
+  const canSplit = requirement.status !== '已关闭';
+  const canConfirm = requirement.status === '待确认';
+  return `<article class="brief${splitOpen ? ' brief--open' : ''}" data-req-card="${requirement.id}">
+    <div class="brief__rail">
+      <div class="brief__no">${pad2(requirement.seqNo)}<small>REQ</small></div>
+      ${statusMarkup(requirement.status, REQ_TONE[requirement.status])}
+    </div>
+    <div class="brief__body">
+      <div class="brief__top">
+        ${priorityMarkup(requirement.priority)}
+        <span class="type-label">来源 · ${esc(sourceGist(requirement.sourceNote))}</span>
+        <span class="brief__updated">${esc(requirement.updatedAt)} 更新</span>
+      </div>
+      <h3><button type="button" data-open-req="${requirement.id}">${esc(requirement.title)}</button></h3>
+      <p class="brief__lede">${esc(requirement.description)}</p>
+      <blockquote class="brief__source"><span>原始来意</span>${esc(requirement.sourceNote)}</blockquote>
+      <dl class="brief__facts">
+        <div class="brief__fact"><dt>验收要点</dt><dd>${esc(requirement.acceptance || '待拆任务时补充验收口径。')}</dd></div>
+        <div class="brief__fact"><dt>最新动态</dt><dd>${esc(requirement.latest)}</dd></div>
+      </dl>
+      <div class="brief__foot">
+        <span class="brief__tasks">${tasks.length ? `${pad2(tasks.length)} 个任务 · ${pad2(done)} 已完成` : '尚未拆出任务'} · ${esc(project.shortCode)}</span>
+        <div class="brief__actions">
+          <button class="btn btn--ghost btn--sm" type="button" data-open-req="${requirement.id}">打开简报 ${ICON.arrow}</button>
+          ${canSplit ? `<button class="btn btn--sm" type="button" data-split-toggle="${requirement.id}">${splitOpen ? '收起拆稿' : '拆任务'}</button>` : ''}
+          ${canConfirm ? `<button class="btn btn--primary btn--sm" type="button" data-confirm-req="${requirement.id}">确认</button>` : ''}
+        </div>
+      </div>
+    </div>
+    ${splitOpen ? splitEditor(requirement) : ''}
+  </article>`;
+}
+function splitPreview(draft) {
+  const titles = parseSplitTitles(draft.titles);
+  if (!titles.length) {
+    return `<div class="split__preview" data-split-preview><p class="split__empty">还没有任务。先在左侧写下第一行；拆稿会即时预览。</p></div>`;
+  }
+  const prose = titles.length > 1 && titles.some(title => /^(以及|并且|并|和|与|或|及)/.test(title) || /[。！？]$/.test(title));
+  return `<div class="split__preview" data-split-preview>
+    <div class="split__preview-head"><span>将拆出 ${pad2(titles.length)} 个任务</span><b>${esc(draft.type)} / ${esc(draft.priority)}</b></div>
+    <ol class="split__list">${titles.map((title, index) => `<li><span>${pad2(index + 1)}</span>${esc(title)}</li>`).join('')}</ol>
+    ${prose ? '<p class="split__warn">这些标题看起来像一段话被拆开了。如果本意是一个任务，请写在同一行。</p>' : ''}
+  </div>`;
+}
+function parseSplitTitles(value) {
+  return String(value || '').split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+}
+function splitEditor(requirement) {
+  const draft = state.splitDraft || { titles: '', type: '开发', priority: requirement.priority || 'P2', acceptance: requirement.acceptance || '' };
+  const titles = parseSplitTitles(draft.titles);
+  return `<form class="split" data-split-form data-id="${requirement.id}">
+    <div class="split__head">
+      <div>
+        <div class="eyebrow">SPLIT / 拆稿</div>
+        <h4>把「${esc(requirement.title)}」拆成任务</h4>
+      </div>
+      <p>一行一个任务；行内逗号、分号不会拆开。拆出的任务进入「就绪」，可稍后派发。</p>
+    </div>
+    <div class="split__grid">
+      <label class="field">
+        <span>任务草稿</span>
+        <textarea name="titles" rows="5" data-split-titles placeholder="例如：&#10;设计触达规则的数据结构&#10;实现二次提醒的幂等发送">${esc(draft.titles)}</textarea>
+        <small>优先写动词开头的一句话；验收口径沿用下方输入，可逐条修改。</small>
+      </label>
+      <div class="split__side">
+        <label class="field"><span>任务类型</span><select name="type">
+          ${['设计', '开发', '排障', '评审'].map(value => `<option value="${value}"${draft.type === value ? ' selected' : ''}>${value}</option>`).join('')}
+        </select></label>
+        <label class="field"><span>优先级</span><select name="priority">
+          ${['P0', 'P1', 'P2', 'P3'].map(value => `<option value="${value}"${draft.priority === value ? ' selected' : ''}>${value}</option>`).join('')}
+        </select></label>
+        <label class="field"><span>验收标准</span><textarea name="acceptance" rows="2" placeholder="应用到拆出的任务">${esc(draft.acceptance)}</textarea></label>
+      </div>
+    </div>
+    ${splitPreview(draft)}
+    <div class="split__foot">
+      <span class="hint">拆稿不会自动派发；确认后在任务页逐条查看。</span>
+      <div class="split__actions">
+        <button class="btn btn--sm" type="button" data-split-cancel="${requirement.id}">取消</button>
+        <button class="btn btn--primary btn--sm" type="submit" data-split-submit ${titles.length ? '' : 'disabled'}>拆出 ${pad2(titles.length)} 个任务</button>
+      </div>
+    </div>
+  </form>`;
+}
+function pageRequirements() {
+  const project = activeProject();
+  const all = requirementsOf(project.id);
+  const current = state.reqFilter;
+  const filtered = current === '全部' ? all : all.filter(item => item.status === current);
+  const counts = { '全部': all.length };
+  ['待确认', '已确认', '已拆分', '已关闭'].forEach(status => { counts[status] = all.filter(item => item.status === status).length; });
+  return `${pageHead('REQUIREMENTS · 需求简报', '需求', '一段来意，被整理成一页可确认的简报。', `<strong>${pad2(all.length)}</strong><span>条在册</span>`)}
+    ${projectBand(true)}
+    <div class="toolbar">
+      <div class="chips" role="group" aria-label="按状态筛选需求">
+        ${['全部', '待确认', '已确认', '已拆分', '已关闭'].map(status => chip(status, counts[status], current === status, status, 'req')).join('')}
+      </div>
+      <div class="toolbar__right">
+        <span class="hint">${current === '全部' ? '按更新时间排序' : `仅看 ${current}`}</span>
+        <button class="btn btn--primary btn--sm" type="button" data-action="new-requirement">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2"/></svg>
+          新建需求
+        </button>
+      </div>
+    </div>
+    <section aria-label="需求列表">
+      ${filtered.length ? filtered.map(item => requirementBrief(item, project)).join('') : `<div class="empty-state"><strong>这个筛选下没有需求</strong><p>切换状态，或新建一条需求简报。</p><button class="btn btn--sm" type="button" data-filter-req="全部" style="margin-top:14px">查看全部</button></div>`}
+    </section>`;
+}
+
+/* ============================================================
+   Tasks
+   ============================================================ */
+function taskRow(task) {
+  const attempt = task.attempts[0];
+  return `<button class="task-row" type="button" data-open-task="${task.id}">
+    <span class="task-row__no">#${task.seqNo}</span>
+    <span class="task-row__main">
+      <span class="task-row__kicker">
+        <span class="type-label">${esc(task.type)}</span>
+        ${priorityMarkup(task.priority)}
+        <span class="task-row__attempt">${attempt ? `尝试 ${esc(attempt.id)} · ${esc(attempt.stage || attemptStage(task))}` : '未派发'}</span>
+      </span>
+      <span class="task-row__title">${esc(task.title)}</span>
+    </span>
+    <span class="task-row__side">
+      ${statusMarkup(task.status, TASK_TONE[task.status])}
+      <span class="task-row__time">${esc(task.updatedAt)}</span>
+    </span>
+    <span class="task-row__arrow">${ICON.arrow}</span>
+  </button>`;
+}
+function pageTasks() {
+  const project = activeProject();
+  const all = tasksOf(project.id);
+  const current = state.taskFilter;
+  const statuses = ['全部', '就绪', '进行中', '评审', '待验收', '完成', '阻塞', '取消'];
+  const counts = { '全部': all.length };
+  statuses.slice(1).forEach(status => { counts[status] = all.filter(item => item.status === status).length; });
+  const groups = requirementsOf(project.id).map(requirement => ({
+    requirement,
+    tasks: tasksForRequirement(requirement.id).filter(task => current === '全部' || task.status === current)
+  })).filter(group => group.tasks.length);
+  const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
+  return `${pageHead('TASKS · 任务流', '任务', '任务按需求归位。执行尝试、证据与评审，只在详情里展开。', `<strong>${pad2(all.length)}</strong><span>个任务在册</span>`)}
+    ${projectBand(true)}
+    <div class="toolbar">
+      <div class="chips" role="group" aria-label="按状态筛选任务">
+        ${statuses.map(status => chip(status, counts[status], current === status, status, 'task')).join('')}
+      </div>
+      <div class="toolbar__right"><span class="hint">按需求归组 · ${pad2(total)} 个可见</span></div>
+    </div>
+    ${groups.length ? groups.map(group => `<section class="task-group">
+      <div class="task-group__head">
+        <span class="task-group__no">${pad2(group.requirement.seqNo)}</span>
+        <span class="task-group__title"><button type="button" data-open-req="${group.requirement.id}">${esc(group.requirement.title)}</button></span>
+        <span class="task-group__meta">
+          <span>${pad2(group.tasks.length)} 个任务</span>
+          <span>·</span>
+          ${statusMarkup(group.requirement.status, REQ_TONE[group.requirement.status], true)}
+          <button class="row-button" type="button" data-open-req="${group.requirement.id}">需求简报 ${ICON.arrow}</button>
+        </span>
+      </div>
+      <div class="task-sheet">${group.tasks.map(taskRow).join('')}</div>
+    </section>`).join('') : `<div class="empty-state"><strong>这个筛选下没有任务</strong><p>任务不会脱离需求单独存在。换一个状态，或先拆出任务。</p><button class="btn btn--sm" type="button" data-filter-task="全部" style="margin-top:14px">查看全部</button></div>`}
+    <p class="hint hint--tight" style="margin-top:8px">执行尝试只出现在任务详情中，避免任务列表被运行细节淹没。</p>`;
+}
+
+/* ============================================================
+   Inbox
+   ============================================================ */
+function pageInbox() {
+  const project = activeProject();
+  const items = inboxOf(project.id);
+  return `${pageHead('INBOX · 来信', '收件箱', '未经整理的来意，先在这里落座。', `<strong>${pad2(items.length)}</strong><span>封未处理</span>`)}
+    ${projectBand(true)}
+    <div class="inbox-note">
+      <p>来信不会直接变成需求。先读一遍，再决定是否转为待确认的简报。</p>
+      <button class="btn btn--sm" type="button" data-action="new-inbox">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2"/></svg>
+        记录来信
+      </button>
+    </div>
+    ${items.length ? items.map(item => `<article class="letter">
+      <div class="letter__meta">
+        <span class="letter__channel">${esc(item.channel)}</span>
+        <span class="letter__contact">${esc(item.contact || '未留联系人')}</span>
+        <span class="letter__time">${esc(item.receivedAt)}</span>
+      </div>
+      <div>
+        <blockquote class="letter__quote">${esc(item.rawContext)}</blockquote>
+        <p class="letter__sub">关联项目 · ${esc(project.name)} · 尚未归档</p>
+      </div>
+      <div class="letter__actions">
+        <button class="btn btn--primary btn--sm" type="button" data-triage-inbox="${item.id}">转为需求</button>
+        <button class="btn btn--ghost btn--sm" type="button" data-ignore-inbox="${item.id}">忽略</button>
+      </div>
+    </article>`).join('') : `<div class="empty-state"><strong>收件箱清空了</strong><p>所有来信都已转为需求或被忽略。新的来意会出现在这里。</p></div>`}`;
+}
+
+/* ============================================================
+   Memory
+   ============================================================ */
+function memoryNote(entry) {
+  const search = `${entry.title} ${entry.content} ${entry.tags.join(' ')} ${entry.type}`.toLowerCase();
+  const actionable = entry.status === '草稿' || entry.status === '待复核';
+  return `<article class="note" data-search="${esc(search)}">
+    <div class="note__top">
+      <span class="note__type">${esc(entry.type)}</span>
+      ${statusMarkup(entry.status, MEMORY_TONE[entry.status])}
+      <span class="mono" style="margin-left:auto">${esc(entry.updatedAt)}</span>
+    </div>
+    <h3>${esc(entry.title)}</h3>
+    <p class="note__content">${esc(entry.content)}</p>
+    <div class="note__tags">${entry.tags.map(tag => `<span class="note__tag">${esc(tag)}</span>`).join('')}</div>
+    <div class="note__foot">
+      <span class="note__source"><span>来源 · ${esc(entry.sourceType)}${entry.sourceRef ? ` · ${esc(entry.sourceRef)}` : ''}</span><span>最近更新 ${esc(entry.updatedAt)}</span></span>
+      ${actionable ? `<span class="note__actions">
+        <button class="btn btn--sm" type="button" data-confirm-memory="${entry.id}">确认</button>
+        <button class="btn btn--ghost btn--sm" type="button" data-reject-memory="${entry.id}">退回</button>
+      </span>` : `<span class="micro">已归档</span>`}
+    </div>
+  </article>`;
+}
+function pageMemory() {
+  const project = activeProject();
+  const items = memoryOf(project.id);
+  const query = state.memoryQuery;
+  const filtered = items.filter(entry => !query || `${entry.title} ${entry.content} ${entry.tags.join(' ')}`.toLowerCase().includes(query.toLowerCase()));
+  return `${pageHead('MEMORY · 备忘', '记忆', '被确认过的判断，成为下一次工作的前提。', `<strong>${pad2(items.length)}</strong><span>条记忆</span>`)}
+    ${projectBand(true)}
+    <div class="toolbar memory-toolbar">
+      <label class="search-line">
+        ${ICON.search}
+        <input id="memorySearch" type="search" value="${esc(query)}" placeholder="搜索标题、内容或标签" aria-label="搜索记忆">
+      </label>
+      <div class="toolbar__right">
+        <span class="hint" id="memoryCount">${pad2(filtered.length)} 条可见</span>
+        <button class="btn btn--primary btn--sm" type="button" data-action="new-memory">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2"/></svg>
+          新建记忆
+        </button>
+      </div>
+    </div>
+    <div class="memory-grid">
+      ${items.map(memoryNote).join('')}
+      <div class="empty-state memory-empty" id="memoryEmpty" hidden><strong>没有匹配的记忆</strong><p>换一个关键词，或清空搜索。</p></div>
+    </div>`;
+}
+function filterMemoryCards() {
+  const query = state.memoryQuery.trim().toLowerCase();
+  let visible = 0;
+  $$('.note[data-search]').forEach(note => {
+    const match = !query || note.dataset.search.includes(query);
+    note.hidden = !match;
+    if (match) visible++;
+  });
+  const empty = $('#memoryEmpty');
+  if (empty) empty.hidden = visible > 0;
+  const count = $('#memoryCount');
+  if (count) count.textContent = `${pad2(visible)} 条可见`;
+}
+
+/* ============================================================
+   Reviews
+   ============================================================ */
+function pageReviews() {
+  const project = activeProject();
+  const projectTaskIds = new Set(tasksOf(project.id).map(item => item.id));
+  const allReviews = DATA.reviews.filter(item => projectTaskIds.has(item.taskId));
+  const pending = tasksOf(project.id).filter(item => item.status === '评审');
+  const current = state.reviewFilter;
+  const filtered = current === '全部' ? allReviews : allReviews.filter(item => item.decision === current);
+  const passed = allReviews.filter(item => item.decision === '通过').length;
+  const returned = allReviews.filter(item => item.decision === '退回').length;
+  return `${pageHead('REVIEWS · 评审', '评审', '通过或退回，都要留下可回看的理由。', `<strong>${pad2(pending.length)}</strong><span>条待评审</span>`)}
+    ${projectBand(true)}
+    <div class="review-stats">
+      <div class="review-stat"><strong>${pad2(passed)}</strong><span>通过</span></div>
+      <div class="review-stat${returned ? ' is-accent' : ''}"><strong>${pad2(returned)}</strong><span>退回</span></div>
+      <div class="review-stat${pending.length ? ' is-pending' : ''}"><strong>${pad2(pending.length)}</strong><span>待评审</span></div>
+      <div class="chips" style="margin-left:auto" role="group" aria-label="按结论筛选评审">
+        ${['全部', '通过', '退回'].map(value => chip(value, value === '全部' ? allReviews.length : allReviews.filter(item => item.decision === value).length, current === value, value, 'review')).join('')}
+      </div>
+    </div>
+    ${pending.length ? pending.map(task => {
+      const requirement = requirementById(task.requirementId);
+      return `<section class="pending-review">
+        <div class="pending-review__label">等待判断<strong>REVIEW QUEUE</strong></div>
+        <div>
+          <h3>${esc(task.title)}</h3>
+          <p>${requirement ? `来自需求 #${pad2(requirement.seqNo)} ${esc(requirement.title)}` : '未关联需求'} · 尝试 ${esc(task.currentAttemptId || '—')} · 更新 ${esc(task.updatedAt)}</p>
+        </div>
+        <button class="btn btn--primary btn--sm" type="button" data-open-task="${task.id}" data-open-review="1">写评审</button>
+      </section>`;
+    }).join('') : ''}
+    <div class="section-head review-ledger"><h2>评审记录</h2><span class="section-head__aside">LEDGER · ${pad2(filtered.length)} 条</span></div>
+    <section aria-label="评审记录">
+      ${filtered.length ? filtered.map(review => {
+        const task = taskById(review.taskId);
+        const stamp = dateRail(review.createdAt);
+        return `<article class="review-entry">
+          <div class="review-entry__date"><strong>${esc(stamp.big)}</strong><span>${esc(stamp.small)}</span></div>
+          <div>
+            <div class="review-entry__top">
+              <span class="verdict verdict--${review.decision === '通过' ? 'pass' : 'back'}">${esc(review.decision)}</span>
+              <button class="review-entry__task" type="button" ${task ? `data-open-task="${task.id}"` : 'disabled'}>${esc(task ? task.title : '任务已删除')}</button>
+              <span class="review-entry__meta">${task ? `#${task.seqNo}` : '—'} · 任务 · ${esc(review.createdAt)}</span>
+            </div>
+            <blockquote>${esc(review.comments || '未留下评语。')}</blockquote>
+            <p class="review-entry__meta" style="margin-top:6px">评审人 · ${esc(review.reviewer || '未署名')}</p>
+          </div>
+        </article>`;
+      }).join('') : `<div class="empty-state"><strong>这个筛选下没有评审</strong><p>评审记录会随任务详情一起留下，不单独修改。</p></div>`}
+    </section>`;
+}
+
+/* ============================================================
+   Drawer
+   ============================================================ */
+function drawerHead(eyebrow, extra = '') {
+  return `<header class="drawer__head">
+    <div class="drawer__eyebrow">${eyebrow}${extra}</div>
+    <button class="icon-btn" type="button" data-close-drawer aria-label="关闭抽屉" title="关闭">${ICON.close}</button>
+  </header>`;
+}
+function drawerRequirement(requirement) {
+  const project = projectById(requirement.projectId) || activeProject();
+  const tasks = tasksForRequirement(requirement.id);
+  const activity = requirement.activity || [];
+  const canSplit = requirement.status !== '已关闭';
+  return `${drawerHead(`<span>${esc(project.shortCode)}</span><span>/</span><span>需求简报</span>`, statusMarkup(requirement.status, REQ_TONE[requirement.status]))}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">${esc(requirement.title)}</h2>
+      <p class="drawer__lede">${esc(requirement.description)}</p>
+      <dl class="drawer-meta">
+        <div><dt>编号</dt><dd><code>${reqLabel(requirement)}</code></dd></div>
+        <div><dt>优先级</dt><dd>${requirement.priority ? priorityMarkup(requirement.priority) : '未设定'}</dd></div>
+        <div><dt>来源</dt><dd>${esc(sourceGist(requirement.sourceNote))}</dd></div>
+        <div><dt>最近更新</dt><dd>${esc(requirement.updatedAt)}</dd></div>
+      </dl>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">01</span>原始来意</h3><span>SOURCE</span></div>
+        <blockquote class="drawer-quote"><small>${esc(project.name)} · 收件归档</small>${esc(requirement.sourceNote)}</blockquote>
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">02</span>验收口径</h3><span>DONE MEANS</span></div>
+        <p class="drawer-accept">${esc(requirement.acceptance || '还没有写下验收口径。拆任务时会自动带入任务验收。')}</p>
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">03</span>关联任务</h3><span>${pad2(tasks.length)} TASKS</span></div>
+        ${tasks.length ? `<div class="drawer-list">${tasks.map(task => `<button class="drawer-task" type="button" data-open-task="${task.id}">
+          <span class="drawer-task__no">#${task.seqNo}</span>
+          <span class="drawer-task__title">${esc(task.title)}<small>${esc(task.type)} · ${esc(task.priority)} · 尝试 ${esc(task.currentAttemptId || '未派发')}</small></span>
+          ${statusMarkup(task.status, TASK_TONE[task.status])}
+        </button>`).join('')}</div>` : `<div class="drawer-empty"><strong>还没有任务</strong>这条需求仍在等一次拆解。拆稿会就地进行，不会跳到新页面。</div>`}
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">04</span>最近活动</h3><span>ACTIVITY</span></div>
+        <ul class="drawer-activity">${activity.map(item => `<li><time>${esc(item.at)}</time><span>${esc(item.text)}</span></li>`).join('')}</ul>
+      </section>
+    </div>
+    <footer class="drawer__foot">
+      ${requirement.status === '待确认' ? `<button class="btn btn--primary btn--sm" type="button" data-confirm-req="${requirement.id}">确认需求</button>` : ''}
+      ${canSplit ? `<button class="btn btn--sm" type="button" data-split-from-drawer="${requirement.id}">拆任务</button>` : ''}
+      ${canSplit ? `<button class="btn btn--ghost btn--sm" type="button" data-close-requirement="${requirement.id}">关闭需求</button>` : ''}
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-close-drawer>收起</button>
+    </footer>`;
+}
+function attemptCard(attempt, index, total) {
+  return `<article class="attempt">
+    <div class="attempt__head">
+      <span class="attempt__no">第 ${total - index} 次尝试 · ${esc(attempt.id)}</span>
+      ${statusMarkup(attempt.status, ATTEMPT_TONE[attempt.status])}
+      <time>${esc(attempt.createdAt)}</time>
+    </div>
+    <div class="attempt__facts">
+      <div class="attempt__fact"><span>阶段</span>${esc(attempt.stage || '—')}</div>
+      <div class="attempt__fact"><span>执行器会话</span><code>${esc(attempt.workerSessionId || '—')}</code></div>
+      <div class="attempt__fact"><span>最近报告</span>${esc(attempt.lastReportAt || '—')}</div>
+      <div class="attempt__fact"><span>消耗</span>${esc(attempt.tokenCost || '—')}</div>
+    </div>
+    ${attempt.report ? `<p class="attempt__report">${esc(attempt.report)}</p>` : ''}
+    ${attempt.attention ? `<p class="attempt__attention">需要关注 · ${esc(attempt.attention)}</p>` : ''}
+  </article>`;
+}
+function artifactRow(artifact) {
+  return `<article class="artifact">
+    <span class="artifact__type">${esc(artifact.type)}</span>
+    <div>
+      <h4>${esc(artifact.title || artifact.uri || '未命名产物')}</h4>
+      ${artifact.uri ? `<code>${esc(artifact.uri)}</code>` : ''}
+      ${artifact.content ? `<p>${esc(artifact.content)}</p>` : ''}
+    </div>
+  </article>`;
+}
+function reviewCard(review) {
+  return `<article class="review-card">
+    <div class="review-card__head">
+      <span class="verdict verdict--${review.decision === '通过' ? 'pass' : 'back'}">${esc(review.decision)}</span>
+      <span class="review-card__by">${esc(review.reviewer || '未署名')} · ${esc(review.createdAt)}</span>
+    </div>
+    <blockquote>${esc(review.comments || '未留下评语。')}</blockquote>
+  </article>`;
+}
+function drawerTask(task, reviewOpen) {
+  const project = projectById(task.projectId) || activeProject();
+  const requirement = requirementById(task.requirementId);
+  const reviews = reviewsForTask(task.id);
+  const canDispatch = task.status === '就绪' || task.status === '阻塞';
+  const canRetry = task.status === '阻塞';
+  const canAccept = task.status === '待验收';
+  const canReview = task.status === '评审';
+  const canCancel = task.status !== '完成' && task.status !== '取消';
+  return `${drawerHead(`<span>${esc(project.shortCode)}</span><span>/</span><span>任务详情</span>`, statusMarkup(task.status, TASK_TONE[task.status]))}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">${esc(task.title)}</h2>
+      <p class="drawer__lede">${esc(task.description || '这条任务没有额外说明，验收标准见下。')}</p>
+      ${requirement ? `<button class="row-button" type="button" data-open-req="${requirement.id}" style="margin-bottom:18px">所属需求 #${pad2(requirement.seqNo)} · ${esc(requirement.title)} ${ICON.arrow}</button>` : ''}
+      <dl class="drawer-meta">
+        <div><dt>任务编号</dt><dd><code>#${task.seqNo} · ${esc(task.id)}</code></dd></div>
+        <div><dt>类型 / 优先级</dt><dd>${esc(task.type)} · ${priorityMarkup(task.priority)}</dd></div>
+        <div><dt>当前尝试</dt><dd><code>${esc(task.currentAttemptId || '未派发')}</code> · ${esc(attemptStage(task))}</dd></div>
+        <div><dt>自动派发</dt><dd>${task.autoDispatch ? '开启' : '关闭'}</dd></div>
+        <div><dt>最近更新</dt><dd>${esc(task.updatedAt)}</dd></div>
+        <div><dt>验收</dt><dd>${task.acceptedBy ? `${esc(task.acceptedBy)} · ${esc(task.acceptedAt || '')}` : '尚未验收'}</dd></div>
+      </dl>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">01</span>验收标准</h3><span>ACCEPTANCE</span></div>
+        <p class="drawer-accept">${esc(task.acceptance || '未填写验收标准。')}</p>
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">02</span>执行尝试</h3><span>${pad2(task.attempts.length)} ATTEMPTS</span></div>
+        ${task.attempts.length ? task.attempts.map((attempt, index) => attemptCard(attempt, index, task.attempts.length)).join('') : `<div class="drawer-empty"><strong>还没有运行记录</strong>派发后会出现第一次尝试，运行阶段与报告只在这里展开。</div>`}
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">03</span>证据与产物</h3><span>${pad2(task.artifacts.length)} ITEMS</span></div>
+        ${task.artifacts.length ? task.artifacts.map(artifactRow).join('') : `<div class="drawer-empty"><strong>还没有证据</strong>执行器提交的报告、截图与代码位置会归到这里。</div>`}
+      </section>
+      <section class="drawer-section">
+        <div class="drawer-section__head"><h3><span class="section-no">04</span>评审</h3><span>${pad2(reviews.length)} RECORDS</span></div>
+        ${reviews.length ? reviews.map(reviewCard).join('') : `<p class="hint hint--tight">还没有评审记录。${canReview ? '这条任务正在等一次明确的判断。' : ''}</p>`}
+        ${canReview && reviewOpen ? `<form class="drawer-form" data-review-form data-id="${task.id}" style="margin-top:14px">
+          <div class="form-row">
+            <label class="field"><span>评审结论</span><select name="decision"><option value="通过">通过</option><option value="退回">退回</option></select></label>
+            <label class="field"><span>评审人</span><input name="reviewer" placeholder="可留空" autocomplete="off"></label>
+          </div>
+          <label class="field"><span>评审意见</span><textarea name="comments" rows="3" placeholder="写下通过或退回的理由"></textarea></label>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn--sm" type="button" data-cancel-review>取消</button>
+            <button class="btn btn--primary btn--sm" type="submit">提交评审</button>
+          </div>
+        </form>` : ''}
+      </section>
+      <details class="fold">
+        <summary>事件与审计 · ${pad2(task.events.length)} 条</summary>
+        <div class="fold__body">${task.events.length ? task.events.map(event => `<div class="event">
+          <time>${esc(event.createdAt)}</time>
+          <div><code>${esc(event.eventType)}</code>${event.actor ? ` · ${esc(event.actor)}` : ''}</div>
+        </div>`).join('') : '<p class="hint">暂无事件。</p>'}</div>
+      </details>
+    </div>
+    <footer class="drawer__foot">
+      ${canDispatch ? `<button class="btn btn--primary btn--sm" type="button" data-task-action="dispatch" data-id="${task.id}">${task.status === '阻塞' ? '重新派发' : '派发'}</button>` : ''}
+      ${canRetry ? `<button class="btn btn--sm" type="button" data-task-action="retry" data-id="${task.id}">重试</button>` : ''}
+      ${canAccept ? `<button class="btn btn--primary btn--sm" type="button" data-task-action="accept" data-id="${task.id}">验收通过</button>` : ''}
+      ${canReview ? `<button class="btn btn--primary btn--sm" type="button" data-review-toggle="${task.id}">${reviewOpen ? '收起评审' : '写评审'}</button>` : ''}
+      ${canCancel ? `<button class="btn btn--ghost btn--sm" type="button" data-task-action="cancel" data-id="${task.id}">取消任务</button>` : ''}
+      <span class="spacer"></span>
+      <button class="btn btn--danger btn--sm" type="button" data-delete-task="${task.id}">删除</button>
+    </footer>`;
+}
+function drawerCreateRequirement(prefill = {}) {
+  const project = projectById(prefill.projectId || state.projectId) || activeProject();
+  const inbox = prefill.inboxId ? DATA.inbox.find(item => item.id === prefill.inboxId) : null;
+  return `${drawerHead('<span>NEW</span><span>/</span><span>需求简报</span>')}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">写下一条需求</h2>
+      <p class="drawer__lede">先写清一句话。来源、说明与验收可以稍后补，不必一次填满。</p>
+      ${inbox ? `<div class="form-context"><div><b>来自收件箱 · ${esc(inbox.channel)} · ${esc(inbox.contact || '未留联系人')}</b><br>原始来意会作为来源保留；保存后这封来信标记为「已建需求」。</div></div>` : ''}
+      <form class="drawer-form" id="create-req-form" data-create-req-form>
+        ${inbox ? `<input type="hidden" name="inboxId" value="${esc(inbox.id)}">` : ''}
+        <label class="field"><span>归属项目</span>
+          <select name="projectId">${DATA.projects.map(item => `<option value="${item.id}"${item.id === project.id ? ' selected' : ''}>${esc(item.shortCode)} · ${esc(item.name)}</option>`).join('')}</select>
+        </label>
+        <label class="field"><span>需求标题 · 一句话</span>
+          <textarea name="title" rows="2" required placeholder="例如：对账单导出支持按客户拆分">${esc(prefill.title || '')}</textarea>
+          <small>用「要让谁，能做什么」来描述，避免只写功能名。</small>
+        </label>
+        <div class="field"><span>优先级</span>
+          <div class="choice-row" role="radiogroup" aria-label="优先级">
+            ${['P0', 'P1', 'P2', 'P3'].map(value => `<label class="choice"><input type="radio" name="priority" value="${value}"${(prefill.priority || 'P2') === value ? ' checked' : ''}><span>${value}</span></label>`).join('')}
+          </div>
+        </div>
+        <details class="disclosure">
+          <summary>补充来源、说明与验收（可选）</summary>
+          <div class="disclosure__body">
+            <label class="field"><span>来源 / 客户原话</span>
+              <textarea name="sourceNote" rows="3" placeholder="例如：企微 · 财务 王倩：……">${esc(prefill.sourceNote || '')}</textarea>
+            </label>
+            <label class="field"><span>需求说明</span>
+              <textarea name="description" rows="3" placeholder="背景、边界与不做的事">${esc(prefill.description || '')}</textarea>
+            </label>
+            <label class="field"><span>验收要点</span>
+              <textarea name="acceptance" rows="3" placeholder="满足什么条件才算完成">${esc(prefill.acceptance || '')}</textarea>
+            </label>
+          </div>
+        </details>
+      </form>
+    </div>
+    <footer class="drawer__foot">
+      <span class="hint" style="font-size:9.5px">保存后进入「待确认」。</span>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-close-drawer>取消</button>
+      <button class="btn btn--primary btn--sm" type="submit" form="create-req-form">保存为待确认</button>
+    </footer>`;
+}
+function drawerCreateProject() {
+  return `${drawerHead('<span>NEW</span><span>/</span><span>项目</span>')}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">建立一本新册子</h2>
+      <p class="drawer__lede">项目是工作台的第一层上下文。短代码会成为封面上的大字，也会进入所有任务编号。</p>
+      <form class="drawer-form" id="create-project-form" data-create-project-form>
+        <div class="form-row">
+          <label class="field"><span>短代码</span><input name="shortCode" required placeholder="例如 BILLING" autocomplete="off"></label>
+          <label class="field"><span>敏感级</span><select name="sensitivity"><option>内部</option><option>公开</option><option>机密</option></select></label>
+        </div>
+        <label class="field"><span>项目名称</span><input name="name" required placeholder="例如：账单系统" autocomplete="off"></label>
+        <label class="field"><span>一句话简介</span><input name="tagline" placeholder="这个项目为什么存在" autocomplete="off"></label>
+        <label class="field"><span>根路径</span><input name="rootPath" placeholder="例如 G:\\work\\billing" autocomplete="off"><small>可留空，稍后在项目设置里补。</small></label>
+      </form>
+    </div>
+    <footer class="drawer__foot">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-close-drawer>取消</button>
+      <button class="btn btn--primary btn--sm" type="submit" form="create-project-form">创建项目</button>
+    </footer>`;
+}
+function drawerCreateMemory() {
+  return `${drawerHead('<span>NEW</span><span>/</span><span>记忆</span>')}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">留一条备忘</h2>
+      <p class="drawer__lede">只写会被下一次工作复用的判断。新建的记忆先进入「草稿」或「待复核」，不直接成为共识。</p>
+      <form class="drawer-form" id="create-memory-form" data-create-memory-form>
+        <div class="form-row">
+          <label class="field"><span>类型</span><select name="type">${['领域', '决策', '经验', '故障', '交接'].map(value => `<option>${value}</option>`).join('')}</select></label>
+          <label class="field"><span>来源类型</span><select name="sourceType">${['人工', '任务', '会话'].map(value => `<option>${value}</option>`).join('')}</select></label>
+        </div>
+        <label class="field"><span>标题</span><input name="title" required placeholder="一句话写下这条判断" autocomplete="off"></label>
+        <label class="field"><span>内容</span><textarea name="content" rows="5" required placeholder="适用的边界、证据与反例"></textarea></label>
+        <details class="disclosure">
+          <summary>来源引用与标签（可选）</summary>
+          <div class="disclosure__body">
+            <label class="field"><span>来源引用</span><input name="sourceRef" placeholder="例如 #115 或评审会 11-12" autocomplete="off"></label>
+            <label class="field"><span>标签</span><input name="tags" placeholder="逗号分隔，例如：发票, 时序" autocomplete="off"></label>
+          </div>
+        </details>
+      </form>
+    </div>
+    <footer class="drawer__foot">
+      <span class="hint" style="font-size:9.5px">保存为草稿，复核后才生效。</span>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-close-drawer>取消</button>
+      <button class="btn btn--primary btn--sm" type="submit" form="create-memory-form">保存记忆</button>
+    </footer>`;
+}
+function drawerCreateInbox() {
+  return `${drawerHead('<span>NEW</span><span>/</span><span>来信</span>')}
+    <div class="drawer__scroll">
+      <h2 class="drawer__title" id="drawerTitle">记录一封来信</h2>
+      <p class="drawer__lede">电话、会议或转述都可以先放进来。收件箱保留原话，不急着解释成需求。</p>
+      <form class="drawer-form" id="create-inbox-form" data-create-inbox-form>
+        <div class="form-row">
+          <label class="field"><span>渠道</span><select name="channel">${['企微', '邮箱', '电话', '同事', '其他'].map(value => `<option>${value}</option>`).join('')}</select></label>
+          <label class="field"><span>联系人</span><input name="contact" placeholder="例如 财务 王倩" autocomplete="off"></label>
+        </div>
+        <label class="field"><span>归属项目</span><select name="projectId">${DATA.projects.map(item => `<option value="${item.id}"${item.id === state.projectId ? ' selected' : ''}>${esc(item.shortCode)} · ${esc(item.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>原始来意</span><textarea name="rawContext" rows="6" required placeholder="尽量保留对方原话"></textarea></label>
+      </form>
+    </div>
+    <footer class="drawer__foot">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-close-drawer>取消</button>
+      <button class="btn btn--primary btn--sm" type="submit" form="create-inbox-form">记录来信</button>
+    </footer>`;
+}
+function drawerFor(drawer) {
+  switch (drawer.type) {
+    case 'requirement': {
+      const requirement = requirementById(drawer.id);
+      return requirement ? drawerRequirement(requirement) : '';
+    }
+    case 'task': {
+      const task = taskById(drawer.id);
+      return task ? drawerTask(task, state.reviewOpen) : '';
+    }
+    case 'create-requirement': return drawerCreateRequirement(drawer.prefill || {});
+    case 'create-project': return drawerCreateProject();
+    case 'create-memory': return drawerCreateMemory();
+    case 'create-inbox': return drawerCreateInbox();
+    default: return '';
+  }
+}
+function renderDrawer() {
+  const shell = $('#drawerShell');
+  if (!state.drawer) {
+    shell.classList.remove('is-open');
+    shell.setAttribute('aria-hidden', 'true');
+    syncLock();
+    return;
+  }
+  const previousScroll = $('#drawerInner .drawer__scroll');
+  const scrollTop = previousScroll ? previousScroll.scrollTop : 0;
+  $('#drawerInner').innerHTML = drawerFor(state.drawer);
+  shell.classList.add('is-open');
+  shell.setAttribute('aria-hidden', 'false');
+  syncLock();
+  requestAnimationFrame(() => {
+    const scroll = $('#drawerInner .drawer__scroll');
+    if (scroll) scroll.scrollTop = scrollTop;
+  });
+}
+function openDrawer(drawer, options = {}) {
+  if (!state.drawer) state.drawerReturnFocus = document.activeElement;
+  hideToast();
+  state.drawer = drawer;
+  state.reviewOpen = drawer.type === 'task' && options.review === true;
+  closeSearch();
+  closeProjectPopover();
+  renderDrawer();
+  requestAnimationFrame(() => {
+    const scroll = $('#drawerInner .drawer__scroll');
+    if (scroll) scroll.scrollTop = 0;
+    const focusTarget = $('#drawerInner [data-close-drawer]');
+    if (focusTarget) focusTarget.focus({ preventScroll: true });
+    if (state.reviewOpen) {
+      requestAnimationFrame(() => {
+        $('#drawerInner [data-review-form]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  });
+}
+function closeDrawer(restoreFocus = true) {
+  if (!state.drawer) return;
+  state.drawer = null;
+  state.reviewOpen = false;
+  renderDrawer();
+  if (restoreFocus && state.drawerReturnFocus instanceof HTMLElement) {
+    try { state.drawerReturnFocus.focus({ preventScroll: true }); } catch { /* ignore */ }
+  }
+  state.drawerReturnFocus = null;
+}
+function openRequirement(id) { if (requirementById(id)) openDrawer({ type: 'requirement', id }); }
+function openTask(id, review = false) { if (taskById(id)) openDrawer({ type: 'task', id }, { review }); }
+
+/* ============================================================
+   Modal / toast
+   ============================================================ */
+function renderModal() {
+  const shell = $('#modalShell');
+  if (!state.modal || state.modal.type !== 'delete-task') {
+    shell.classList.remove('is-open');
+    shell.setAttribute('aria-hidden', 'true');
+    syncLock();
+    return;
+  }
+  const task = taskById(state.modal.id);
+  if (!task) { state.modal = null; renderModal(); return; }
+  $('#modalPanel').innerHTML = `
+    <div class="eyebrow eyebrow--plain modal__eyebrow">确认动作 / DELETE</div>
+    <h2 id="modalTitle">删除这条任务？</h2>
+    <p><strong>${esc(task.title)}</strong></p>
+    <p>任务会从列表与统计中消失，但运行记录、证据与审计仍会保留。这个动作可以在审计里回溯，不会真正抹掉历史。</p>
+    <div class="modal__actions">
+      <button class="btn btn--ghost btn--sm" type="button" data-close-modal>取消</button>
+      <button class="btn btn--primary btn--sm" type="button" data-confirm-delete-task="${task.id}">删除任务</button>
+    </div>`;
+  shell.classList.add('is-open');
+  shell.setAttribute('aria-hidden', 'false');
+  syncLock();
+  requestAnimationFrame(() => $('#modalPanel [data-confirm-delete-task]')?.focus({ preventScroll: true }));
+}
+function openDeleteModal(id) {
+  if (!taskById(id)) return;
+  hideToast();
+  state.modal = { type: 'delete-task', id };
+  renderModal();
+}
+function closeModal() {
+  state.modal = null;
+  renderModal();
+}
+function syncLock() {
+  document.body.classList.toggle('is-locked', Boolean(state.drawer || state.modal));
+}
+let toastTimer;
+function showToast(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.classList.add('is-visible');
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 3200);
+}
+function hideToast() {
+  const toast = $('#toast');
+  if (toast) toast.classList.remove('is-visible');
+  window.clearTimeout(toastTimer);
+}
+
+/* ============================================================
+   Search
+   ============================================================ */
+function closeSearch() {
+  const input = $('#globalSearch');
+  const results = $('#searchResults');
+  if (input) input.value = '';
+  if (results) { results.hidden = true; results.innerHTML = ''; }
+}
+function renderSearch(value) {
+  const query = value.trim().toLowerCase();
+  const box = $('#searchResults');
+  if (!query) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const project = activeProject();
+  const reqs = requirementsOf(project.id).filter(item =>
+    `${item.title} ${item.description} ${item.sourceNote}`.toLowerCase().includes(query)).slice(0, 4);
+  const tasks = tasksOf(project.id).filter(item =>
+    `${item.title} ${item.description || ''} ${item.type}`.toLowerCase().includes(query)).slice(0, 5);
+  const total = reqs.length + tasks.length;
+  box.innerHTML = `<div class="search-results__head"><span>在 ${esc(project.shortCode)} 中检索</span><span>${pad2(total)} 条</span></div>
+    ${reqs.length ? `<div class="search-results__group">需求</div>${reqs.map(item => `<button class="search-result" type="button" data-open-req="${item.id}">
+      <span class="search-result__no">#${pad2(item.seqNo)}</span><span class="search-result__title">${esc(item.title)}</span>
+      ${statusMarkup(item.status, REQ_TONE[item.status], true)}
+    </button>`).join('')}` : ''}
+    ${tasks.length ? `<div class="search-results__group">任务</div>${tasks.map(item => `<button class="search-result" type="button" data-open-task="${item.id}">
+      <span class="search-result__no">#${item.seqNo}</span><span class="search-result__title">${esc(item.title)}</span>
+      ${statusMarkup(item.status, TASK_TONE[item.status], true)}
+    </button>`).join('')}` : ''}
+    ${total === 0 ? '<p class="search-results__empty">没有匹配的需求或任务。换一个词，或切换项目再找。</p>' : ''}`;
+  box.hidden = false;
+}
+
+/* ============================================================
+   Mutations
+   ============================================================ */
+let serial = 0;
+function newId(prefix) {
+  serial++;
+  return `${prefix}_${Date.now().toString(36)}${serial.toString(36)}`;
+}
+function refreshView(options = {}) {
+  renderPage({ preserveScroll: true, animate: false });
+  if (state.drawer) renderDrawer();
+}
+
+function confirmRequirement(id) {
+  const requirement = requirementById(id);
+  if (!requirement || requirement.status !== '待确认') return;
+  requirement.status = '已确认';
+  requirement.updatedAt = '刚刚';
+  requirement.latest = '你确认了这条需求，等待拆解';
+  requirement.activity = requirement.activity || [];
+  requirement.activity.unshift({ at: '刚刚', text: '你确认了需求，可以开始拆任务。' });
+  refreshView();
+  showToast(`需求「${requirement.title}」已确认。`);
+}
+function closeRequirement(id) {
+  const requirement = requirementById(id);
+  if (!requirement || requirement.status === '已关闭') return;
+  requirement.status = '已关闭';
+  requirement.updatedAt = '刚刚';
+  requirement.latest = '你关闭了这条需求';
+  requirement.activity = requirement.activity || [];
+  requirement.activity.unshift({ at: '刚刚', text: '需求被手动关闭，任务保留在任务页。' });
+  refreshView();
+  showToast('需求已关闭。任务与历史记录仍然保留。');
+}
+function openSplit(id) {
+  const requirement = requirementById(id);
+  if (!requirement) return;
+  if (state.page !== 'requirements') state.page = 'requirements';
+  state.reqFilter = '全部';
+  state.splitId = id;
+  state.splitDraft = {
+    titles: '',
+    type: '开发',
+    priority: requirement.priority || 'P2',
+    acceptance: requirement.acceptance || ''
+  };
+  renderPage({ preserveScroll: true });
+  requestAnimationFrame(() => {
+    const form = document.querySelector(`[data-split-form][data-id="${id}"]`);
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const textarea = form?.querySelector('[data-split-titles]');
+    if (textarea) textarea.focus({ preventScroll: true });
+  });
+}
+function toggleSplit(id) {
+  if (state.splitId === id) {
+    state.splitId = null;
+    state.splitDraft = null;
+    renderPage({ preserveScroll: true });
+    return;
+  }
+  openSplit(id);
+}
+function splitFromDrawer(id) {
+  closeDrawer(false);
+  openSplit(id);
+}
+function syncSplitDraft(form) {
+  if (!form) return;
+  const value = name => form.querySelector(`[name="${name}"]`)?.value || '';
+  state.splitDraft = {
+    titles: value('titles'),
+    type: value('type'),
+    priority: value('priority'),
+    acceptance: value('acceptance')
+  };
+  const preview = form.querySelector('[data-split-preview]');
+  if (preview) preview.outerHTML = splitPreview(state.splitDraft);
+  const button = form.querySelector('[data-split-submit]');
+  const count = parseSplitTitles(state.splitDraft.titles).length;
+  if (button) {
+    button.disabled = count === 0;
+    button.textContent = `拆出 ${pad2(count)} 个任务`;
+  }
+}
+function submitSplit(form) {
+  const requirement = requirementById(form.dataset.id);
+  if (!requirement) return;
+  const titles = parseSplitTitles(form.querySelector('[name="titles"]')?.value);
+  if (!titles.length) return;
+  const type = form.querySelector('[name="type"]')?.value || '开发';
+  const priority = form.querySelector('[name="priority"]')?.value || 'P2';
+  const acceptance = form.querySelector('[name="acceptance"]')?.value.trim() || '';
+  const base = Math.max(0, ...tasksOf(requirement.projectId).map(item => item.seqNo));
+  const createdAt = '刚刚';
+  const tasks = titles.map((title, index) => ({
+    id: newId('task'), projectId: requirement.projectId, requirementId: requirement.id,
+    seqNo: base + index + 1, title, type, status: '就绪', priority,
+    acceptance: acceptance || requirement.acceptance || null,
+    currentAttemptId: null, autoDispatch: false, updatedAt: createdAt,
+    acceptedBy: null, acceptedAt: null, completedAt: null,
+    description: `由需求 #${pad2(requirement.seqNo)} 拆解，默认进入「就绪」。`,
+    attempts: [], artifacts: [], events: [{ eventType: 'task.created', actor: '我', createdAt }]
+  }));
+  DATA.tasks.unshift(...tasks);
+  requirement.status = '已拆分';
+  requirement.updatedAt = createdAt;
+  requirement.latest = `拆出 ${tasks.length} 个任务`;
+  requirement.activity = requirement.activity || [];
+  requirement.activity.unshift({ at: createdAt, text: `拆出 ${tasks.length} 个任务，均进入「就绪」。` });
+  state.splitId = null;
+  state.splitDraft = null;
+  state.reqFilter = '全部';
+  refreshView();
+  showToast(`已拆出 ${tasks.length} 个任务，可在任务页逐条派发。`);
+}
+function taskAction(id, kind) {
+  const task = taskById(id);
+  if (!task) return;
+  const now = '刚刚';
+  if (kind === 'dispatch' || kind === 'retry') {
+    const attempt = {
+      id: newId('a'), status: '运行中', stage: kind === 'retry' ? '重试' : '实现',
+      workerSessionId: newId('sess'), createdAt: now, lastReportAt: now, tokenCost: '—',
+      report: kind === 'retry' ? '已重新派发，等待执行器接手。' : '已派发，等待执行器首次报告。',
+      attention: null
+    };
+    task.attempts.unshift(attempt);
+    task.currentAttemptId = attempt.id;
+    task.status = '进行中';
+    task.updatedAt = now;
+    task.events.unshift({ eventType: kind === 'retry' ? 'task.retried' : 'task.dispatched', actor: '我', createdAt: now });
+    showToast(kind === 'retry' ? '任务已重试，新的尝试已开始。' : '任务已派发。');
+  } else if (kind === 'cancel') {
+    task.status = '取消';
+    task.updatedAt = now;
+    task.events.unshift({ eventType: 'task.cancelled', actor: '我', createdAt: now });
+    showToast('任务已取消，历史记录保留。');
+  } else if (kind === 'accept') {
+    task.status = '完成';
+    task.acceptedBy = '我';
+    task.acceptedAt = now;
+    task.completedAt = now;
+    task.updatedAt = now;
+    task.events.unshift({ eventType: 'task.accepted', actor: '我', createdAt: now });
+    showToast('验收通过。任务已归档为完成。');
+  } else {
+    return;
+  }
+  refreshView();
+}
+function submitReview(form) {
+  const task = taskById(form.dataset.id);
+  if (!task) return;
+  const values = new FormData(form);
+  const decision = values.get('decision') === '退回' ? '退回' : '通过';
+  const reviewer = String(values.get('reviewer') || '').trim();
+  const comments = String(values.get('comments') || '').trim();
+  const now = '刚刚';
+  DATA.reviews.unshift({
+    id: newId('rev'), taskId: task.id, decision, reviewer: reviewer || null,
+    comments: comments || null, createdAt: now
+  });
+  task.status = decision === '通过' ? '待验收' : '进行中';
+  task.updatedAt = now;
+  task.events.unshift({ eventType: decision === '通过' ? 'review.passed' : 'review.returned', actor: reviewer || '我', createdAt: now });
+  state.reviewOpen = false;
+  refreshView();
+  showToast(decision === '通过' ? '评审通过，任务进入待验收。' : '评审退回，任务回到进行中。');
+}
+function confirmDeleteTask(id) {
+  const task = taskById(id);
+  if (!task) return;
+  DATA.tasks = DATA.tasks.filter(item => item.id !== id);
+  closeModal();
+  closeDrawer(false);
+  refreshView();
+  window.scrollTo(0, window.scrollY);
+  showToast('任务已删除。运行记录、证据与审计按约定保留。');
+}
+function submitCreateRequirement(form) {
+  const values = new FormData(form);
+  const projectId = String(values.get('projectId') || state.projectId);
+  const title = String(values.get('title') || '').replace(/\s+/g, ' ').trim();
+  if (!title) {
+    form.querySelector('[name="title"]')?.focus();
+    return;
+  }
+  const priority = form.querySelector('input[name="priority"]:checked')?.value || 'P2';
+  const sourceNote = String(values.get('sourceNote') || '').trim();
+  const description = String(values.get('description') || '').trim();
+  const acceptance = String(values.get('acceptance') || '').trim();
+  const project = projectById(projectId);
+  if (!project) return;
+  const seqNo = Math.max(0, ...requirementsOf(projectId).map(item => item.seqNo)) + 1;
+  const id = newId('req');
+  const now = '刚刚';
+  DATA.requirements.unshift({
+    id, projectId, seqNo, title, status: '待确认', priority,
+    description: description || '尚未补充需求说明。',
+    sourceNote: sourceNote || '人工记录 · 暂无来源原话。',
+    acceptance: acceptance || '待拆任务时补充验收口径。',
+    latest: '由你创建，等待确认', updatedAt: now, createdAt: now,
+    activity: [{ at: now, text: '由你创建，进入「待确认」。' }]
+  });
+  const inboxId = values.get('inboxId');
+  if (inboxId) {
+    const item = DATA.inbox.find(entry => entry.id === inboxId);
+    if (item) {
+      item.status = '已建需求';
+      item.triagedAt = now;
+    }
+  }
+  state.projectId = projectId;
+  state.page = 'requirements';
+  state.reqFilter = '全部';
+  state.splitId = null;
+  state.splitDraft = null;
+  state.highlight = id;
+  closeDrawer(false);
+  renderPage();
+  showToast(`需求「${title}」已保存为待确认。`);
+}
+function submitCreateProject(form) {
+  const values = new FormData(form);
+  const code = String(values.get('shortCode') || '').trim().toUpperCase().replace(/\s+/g, '_');
+  const name = String(values.get('name') || '').trim();
+  if (!code || !name) {
+    form.querySelector('[name="shortCode"]')?.focus();
+    return;
+  }
+  if (DATA.projects.some(item => item.shortCode.toUpperCase() === code)) {
+    showToast('这个短代码已经存在，换一个再试。');
+    return;
+  }
+  const id = newId('prj');
+  const tagline = String(values.get('tagline') || '').trim() || '尚未写下项目简介。';
+  const rootPath = String(values.get('rootPath') || '').trim() || '尚未设置根路径';
+  DATA.projects.push({
+    id, shortCode: code, name, tagline,
+    description: '这个项目刚刚建立，还没有需求与任务。',
+    status: '活跃', sensitivity: values.get('sensitivity') || '内部', rootPath,
+    updatedAt: '刚刚',
+    lede: '新项目刚刚建立。先写下第一条需求，让它拥有自己的语境与节奏。'
+  });
+  state.projectId = id;
+  state.page = 'projects';
+  closeDrawer(false);
+  renderPage();
+  showToast(`项目「${name}」已创建。`);
+}
+function submitCreateMemory(form) {
+  const values = new FormData(form);
+  const title = String(values.get('title') || '').trim();
+  const content = String(values.get('content') || '').trim();
+  if (!title || !content) return;
+  const tags = String(values.get('tags') || '').split(/[,，;；\n]+/).map(item => item.trim()).filter(Boolean);
+  DATA.memory.unshift({
+    id: newId('mem'), projectId: state.projectId, type: values.get('type') || '领域',
+    title, content, status: '草稿', sourceType: values.get('sourceType') || '人工',
+    sourceRef: String(values.get('sourceRef') || '').trim() || null, tags,
+    updatedAt: '刚刚'
+  });
+  state.memoryQuery = '';
+  closeDrawer(false);
+  renderPage();
+  showToast('记忆已保存为草稿，等待复核。');
+}
+function submitCreateInbox(form) {
+  const values = new FormData(form);
+  const rawContext = String(values.get('rawContext') || '').trim();
+  if (!rawContext) {
+    form.querySelector('[name="rawContext"]')?.focus();
+    return;
+  }
+  const projectId = String(values.get('projectId') || state.projectId);
+  DATA.inbox.unshift({
+    id: newId('inbox'), projectId,
+    channel: values.get('channel') || '其他',
+    contact: String(values.get('contact') || '').trim() || null,
+    rawContext, status: '未处理', receivedAt: '刚刚'
+  });
+  const project = projectById(projectId);
+  closeDrawer(false);
+  if (projectId !== state.projectId && project) {
+    state.projectId = projectId;
+    state.page = 'inbox';
+  }
+  renderPage();
+  showToast('来信已记录，等待转为需求。');
+}
+function triageInbox(id) {
+  const item = DATA.inbox.find(entry => entry.id === id);
+  if (!item) return;
+  const first = String(item.rawContext || '').split(/[。！？\n]/)[0].trim();
+  openDrawer({
+    type: 'create-requirement',
+    prefill: {
+      projectId: item.projectId,
+      title: first.slice(0, 70),
+      sourceNote: `${item.channel} · ${item.contact || '未留联系人'}：“${item.rawContext}”`,
+      description: item.rawContext,
+      acceptance: '',
+      inboxId: item.id
+    }
+  });
+}
+function ignoreInbox(id) {
+  const item = DATA.inbox.find(entry => entry.id === id);
+  if (!item) return;
+  item.status = '已忽略';
+  refreshView();
+  showToast('来信已忽略，仍可在审计中查到。');
+}
+function settleMemory(id, decision) {
+  const entry = DATA.memory.find(item => item.id === id);
+  if (!entry) return;
+  entry.status = decision === 'confirm' ? '已确认' : '已废弃';
+  entry.updatedAt = '刚刚';
+  refreshView();
+  showToast(decision === 'confirm' ? '记忆已确认。' : '记忆已退回废弃。');
+}
+
+/* ============================================================
+   Events
+   ============================================================ */
+document.addEventListener('click', event => {
+  const target = event.target;
+
+  if (target.closest('[data-close-drawer]')) { closeDrawer(); return; }
+  if (target.closest('[data-close-modal]')) { closeModal(); return; }
+  const deleteConfirm = target.closest('[data-confirm-delete-task]');
+  if (deleteConfirm) { confirmDeleteTask(deleteConfirm.dataset.confirmDeleteTask); return; }
+
+  if (target.closest('[data-toggle-projects]')) { toggleProjectPopover(); return; }
+  const projectOption = target.closest('[data-project-option]');
+  if (projectOption) { switchProject(projectOption.dataset.projectOption); return; }
+  if (!target.closest('#projectPopover') && !target.closest('.project-switch')) closeProjectPopover();
+  if (!target.closest('.search-wrap')) closeSearch();
+
+  const nav = target.closest('[data-nav]');
+  if (nav) { go(nav.dataset.nav); return; }
+
+  const action = target.closest('[data-action]');
+  if (action) {
+    const name = action.dataset.action;
+    if (name === 'new-requirement') openDrawer({ type: 'create-requirement' });
+    if (name === 'new-project') openDrawer({ type: 'create-project' });
+    if (name === 'new-memory') openDrawer({ type: 'create-memory' });
+    if (name === 'new-inbox') openDrawer({ type: 'create-inbox' });
+    return;
+  }
+
+  const reqFilter = target.closest('[data-filter-req]');
+  if (reqFilter) {
+    state.reqFilter = reqFilter.dataset.filterReq;
+    state.splitId = null;
+    state.splitDraft = null;
+    renderPage({ preserveScroll: true });
+    return;
+  }
+  const taskFilter = target.closest('[data-filter-task]');
+  if (taskFilter) {
+    state.taskFilter = taskFilter.dataset.filterTask;
+    renderPage({ preserveScroll: true });
+    return;
+  }
+  const reviewFilter = target.closest('[data-filter-review]');
+  if (reviewFilter) {
+    state.reviewFilter = reviewFilter.dataset.filterReview;
+    renderPage({ preserveScroll: true });
+    return;
+  }
+
+  const openReq = target.closest('[data-open-req]');
+  if (openReq) { openRequirement(openReq.dataset.openReq); return; }
+  const openTaskButton = target.closest('[data-open-task]');
+  if (openTaskButton) {
+    openTask(openTaskButton.dataset.openTask, openTaskButton.dataset.openReview === '1');
+    return;
+  }
+
+  const confirm = target.closest('[data-confirm-req]');
+  if (confirm) { confirmRequirement(confirm.dataset.confirmReq); return; }
+  const closeReq = target.closest('[data-close-requirement]');
+  if (closeReq) { closeRequirement(closeReq.dataset.closeRequirement); return; }
+
+  const splitToggle = target.closest('[data-split-toggle]');
+  if (splitToggle) { toggleSplit(splitToggle.dataset.splitToggle); return; }
+  const splitFromDrawerButton = target.closest('[data-split-from-drawer]');
+  if (splitFromDrawerButton) { splitFromDrawer(splitFromDrawerButton.dataset.splitFromDrawer); return; }
+  const splitCancel = target.closest('[data-split-cancel]');
+  if (splitCancel) {
+    state.splitId = null;
+    state.splitDraft = null;
+    renderPage({ preserveScroll: true });
+    return;
+  }
+
+  const enterProject = target.closest('[data-enter-project]');
+  if (enterProject) {
+    const id = enterProject.dataset.enterProject;
+    if (id !== state.projectId) state.projectId = id;
+    closeProjectPopover();
+    go('overview');
+    showToast(`已进入「${activeProject().name}」。`);
+    return;
+  }
+
+  const triage = target.closest('[data-triage-inbox]');
+  if (triage) { triageInbox(triage.dataset.triageInbox); return; }
+  const ignore = target.closest('[data-ignore-inbox]');
+  if (ignore) { ignoreInbox(ignore.dataset.ignoreInbox); return; }
+
+  const memoryConfirm = target.closest('[data-confirm-memory]');
+  if (memoryConfirm) { settleMemory(memoryConfirm.dataset.confirmMemory, 'confirm'); return; }
+  const memoryReject = target.closest('[data-reject-memory]');
+  if (memoryReject) { settleMemory(memoryReject.dataset.rejectMemory, 'reject'); return; }
+
+  const taskActionButton = target.closest('[data-task-action]');
+  if (taskActionButton) { taskAction(taskActionButton.dataset.id, taskActionButton.dataset.taskAction); return; }
+  const reviewToggle = target.closest('[data-review-toggle]');
+  if (reviewToggle) {
+    state.reviewOpen = !state.reviewOpen;
+    renderDrawer();
+    requestAnimationFrame(() => {
+      document.querySelector('[data-review-form] [name="comments"]')?.focus({ preventScroll: false });
+    });
+    return;
+  }
+  const reviewCancel = target.closest('[data-cancel-review]');
+  if (reviewCancel) { state.reviewOpen = false; renderDrawer(); return; }
+  const deleteTask = target.closest('[data-delete-task]');
+  if (deleteTask) { openDeleteModal(deleteTask.dataset.deleteTask); return; }
+});
+
+document.addEventListener('submit', event => {
+  const form = event.target;
+  if (form.matches('[data-create-req-form]')) {
+    event.preventDefault();
+    submitCreateRequirement(form);
+    return;
+  }
+  if (form.matches('[data-split-form]')) {
+    event.preventDefault();
+    submitSplit(form);
+    return;
+  }
+  if (form.matches('[data-create-project-form]')) {
+    event.preventDefault();
+    submitCreateProject(form);
+    return;
+  }
+  if (form.matches('[data-create-memory-form]')) {
+    event.preventDefault();
+    submitCreateMemory(form);
+    return;
+  }
+  if (form.matches('[data-create-inbox-form]')) {
+    event.preventDefault();
+    submitCreateInbox(form);
+    return;
+  }
+  if (form.matches('[data-review-form]')) {
+    event.preventDefault();
+    submitReview(form);
+  }
+});
+
+document.addEventListener('input', event => {
+  if (event.target.id === 'globalSearch') {
+    renderSearch(event.target.value);
+    return;
+  }
+  if (event.target.id === 'memorySearch') {
+    state.memoryQuery = event.target.value;
+    filterMemoryCards();
+    return;
+  }
+  if (event.target.closest('[data-split-form]')) {
+    syncSplitDraft(event.target.closest('[data-split-form]'));
+  }
+});
+document.addEventListener('change', event => {
+  if (event.target.closest('[data-split-form]')) syncSplitDraft(event.target.closest('[data-split-form]'));
+});
+
+document.addEventListener('keydown', event => {
+  const typing = event.target instanceof HTMLElement &&
+    (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) || event.target.isContentEditable);
+  if (event.key === 'Escape') {
+    if (state.modal) { closeModal(); return; }
+    if (state.drawer) { closeDrawer(); return; }
+    if ($('#projectPopover') && !$('#projectPopover').hidden) { closeProjectPopover(); return; }
+    closeSearch();
+    return;
+  }
+  if ((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k')) && !typing) {
+    event.preventDefault();
+    $('#globalSearch').focus();
+    return;
+  }
+  if (event.key === 'Enter' && event.target.id === 'globalSearch') {
+    const first = $('#searchResults .search-result');
+    if (first) {
+      event.preventDefault();
+      first.click();
+    }
+  }
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+renderChrome();
+renderPage();
+
+
+
+
+
+</script>
+</body>
+</html>

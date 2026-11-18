@@ -155,6 +155,24 @@ export class Evals extends EnginePart {
     return this.decideEval(thread, evaluation, outcome)
   }
   /**
+   * Start a Ticket for work the host already authorized. Unlike `decide`, this bypasses the Source gate: the host
+   * (the workbench) has checked the task, and records the authorization as an explicit follow-up of the host.
+   * The Trigger is stored and indexed on its Threads, and any queued copy is withdrawn.
+   */
+  authorize(trigger: Trigger, outcome: { title: string; scope: string; reason: string; name?: string }): Decision {
+    this.repo.triggers.save(trigger)
+    const thread = this.thread(trigger.threads[0]!)
+    const at = this.now()
+    thread.pending = thread.pending.filter(id => id !== trigger.id)
+    const evaluation: Evaluation = {
+      id: key('eval', thread.key, 'authorized', trigger.id, at), threadKey: thread.key, triggerIds: [trigger.id], primary: trigger.id,
+      strength: 'explicit', actor: trigger.actor, basis: { via: 'followup', authority: '工作台' }, policyVersion: this.policy().version,
+      startedAt: at, deadline: at,
+    }
+    return this.accept(thread, evaluation, { kind: 'accept', title: outcome.title, scope: outcome.scope, reason: outcome.reason,
+      ...(outcome.name ? { name: outcome.name } : {}) })
+  }
+  /**
    * Queue a stored Trigger for a fresh Eval on its primary Thread and emit `trigger.requeued`; returns false while an Eval holds it.
    * @throws UserError when the Trigger is unknown.
    */
