@@ -407,11 +407,12 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/xg/scope.ts` | Shared project-context key plus `rememberedProject` / `rememberProject` helpers |
 | `src/client/xg/v2/Workbench.tsx` | DSH workbench: today/work/inbox/knowledge/settings views and real actions |
 | `src/client/xg/v2/workbench.css` | Workbench v2 layout using DSH design tokens |
-| `src/client/xg/v2/SettingsPanel.tsx` | Workbench settings tabs: source, eval, execution, prompts, deployment, project, diagnostics |
+| `src/client/xg/v2/SettingsPanel.tsx` | Workbench settings tabs: source, eval, execution, prompts, deployment, runtime, project, diagnostics |
 | `src/client/xg/v2/SidebarBadge.tsx` | DSH sidebar footer action counting workbench items that need a person; opens Today |
 | `src/client/xg/v2/settings/SourceSettings.tsx` | Source settings cards, extracted from the old Source status page |
 | `src/client/xg/v2/settings/EvalSettings.tsx` | Policy rules, admission and assessor settings, extracted from the old Eval page |
 | `src/client/xg/v2/settings/ExecutionSettings.tsx` | Executor capacity and environment settings, extracted from the old Execution page |
+| `src/client/xg/v2/settings/RuntimeStatus.tsx` | Read-only runtime tab: source health, 24-hour flow, executor load, problems and model credentials |
 | `src/client/xg/v2/navigation.ts` | Cross-panel selection state for work documents and inbox items |
 
 `src/sources/github.ts` and `src/sources/feishu.ts` are also the entries of the two Source plugins, built by `tsdown.config.ts` and exported in `package.json` as `./github-watch` and `./feishu-watch`. The bundle's `cordis.patch.yml` inserts the three plugins, with Feishu disabled.
@@ -460,6 +461,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/class-docs.spec.ts` | Every class in `src` has a JSDoc block before it |
 | `tests/docs.spec.ts` | Numbered documents link only to earlier ones, every local link resolves, no document has merge conflict markers, and this document's tables list every module and every test |
 | `tests/xg-service.spec.ts` | xg inbox, requirement split, dispatch, report, review, acceptance, retry/cancel, triage gate, memory confirmation and search |
+| `tests/xg-v2.spec.tsx` | v2 workbench interactions: today proposal diff, task review form, delete exits and requirement deletion guard |
 | `tests/xg-dispatch.spec.ts` | `EngineTicketGateway`: an authorized xg task becomes a real Ticket, and a worker report syncs back |
 | `tests/xg-policy.spec.ts` | Sensitive-content kinds, redaction idempotence, sensitivity blocking and nested field guarding |
 | `tests/xg-email.spec.ts` | `.eml` parsing (plain, base64, quoted-printable, folded headers, HTML) and collector dedupe |

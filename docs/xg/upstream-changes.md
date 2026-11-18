@@ -81,13 +81,14 @@ src/xg/
 src/client/xg/
   client.ts panel.tsx project-settings.tsx xg.css
   v2/ Workbench.tsx SettingsPanel.tsx SidebarBadge.tsx workbench.css navigation.ts
+  v2/settings/ SourceSettings.tsx EvalSettings.tsx ExecutionSettings.tsx RuntimeStatus.tsx
 docs/v1/ui-design/
   README.md scoring-guide.md scoring-plan.md scoring-table.md final-synthesis.md
   proposals/01-command-center … 05-timeline-flow, proposals/00-final
   scores/agent-01.md … agent-08.md
 tests/
   xg-acceptance.spec.ts xg-service.spec.ts xg-dispatch.spec.ts xg-policy.spec.ts xg-email.spec.ts xg-http.spec.ts
-  xg-panel.spec.tsx xg-tools.spec.ts xg-local.spec.ts xg-upstream.spec.ts
+  xg-v2.spec.tsx xg-tools.spec.ts xg-local.spec.ts xg-upstream.spec.ts
 docs/xg/
   acceptance.md acceptance-report.md upstream-changes.md operations.md opencode-test.md
   v2/ README.md remaining-issues.md prototype/index.html

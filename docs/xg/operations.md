@@ -131,6 +131,13 @@ curl -H 'x-orchestrator-request: 1' http://127.0.0.1:3082/xg/api/tasks
 - 派发、验收、取消仍由人直接操作，不进入提案。
 - 原始 payload、目标 ID 和 revision 在「诊断」里可见，正文只显示人话 diff。
 
+## 模型凭据
+
+- 主 Session、评估模型和 Worker 都使用 DSH 的 provider catalog。
+- Provider / API Key 在 **DSH 设置 → 模型** 中配置；工作台不保存、不显示密钥。
+- 「工作台设置 → 运行」显示默认模型和模型健康；「执行」「评估」可以分别覆盖 Worker 和评估模型。
+- 没有可用凭据时，运行页的模型健康或运行问题会报错，派发前应先修好。
+
 ## 派发前置条件
 
 雄大工作台复用 dsh-superagent 的 Worker 执行器，因此派发前必须通过 dsh-superagent 的部署检查：
@@ -151,7 +158,7 @@ curl -H 'x-orchestrator-request: 1' http://127.0.0.1:3082/xg/api/tasks
 ```
 
 - Ticket `ready` 只把任务推到「评审」，不会自动完成。
-- 评审通过 → 待验收；退回 → 进行中。
+- 评审通过 → 待验收；退回 → 进行中。面板的任务文档在「评审中」时直接提供意见和通过 / 退回按钮。
 - 只有人（或人明确授权的 Agent 调用）能把待验收改为完成。
 - 重试创建新 Attempt，不创建新业务任务。
 - 取消会调用 `Engine.stopTicket`，并撤回 Mandate。

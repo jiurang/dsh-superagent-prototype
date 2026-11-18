@@ -9,15 +9,17 @@ import { SettingsProvider } from '../../settings-kit.tsx'
 import { ProjectSettingsPage } from '../project-settings.tsx'
 import { EvalSettings } from './settings/EvalSettings.tsx'
 import { ExecutionSettings } from './settings/ExecutionSettings.tsx'
+import { RuntimeStatus } from './settings/RuntimeStatus.tsx'
 import { SourceSettings } from './settings/SourceSettings.tsx'
 
-type SettingsTab = 'source' | 'eval' | 'execution' | 'prompts' | 'deployment' | 'project' | 'diagnostics'
+type SettingsTab = 'source' | 'eval' | 'execution' | 'prompts' | 'deployment' | 'runtime' | 'project' | 'diagnostics'
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: 'source', label: '来源' },
   { id: 'eval', label: '评估' },
   { id: 'execution', label: '执行' },
   { id: 'prompts', label: '提示词' },
   { id: 'deployment', label: '部署' },
+  { id: 'runtime', label: '运行' },
   { id: 'project', label: '项目' },
   { id: 'diagnostics', label: '诊断' },
 ]
@@ -46,22 +48,17 @@ export function SettingsPanel({ deploymentForm, audit }: { deploymentForm: Deplo
     if (tab === 'execution') return <SettingsProvider><ExecutionSettings /></SettingsProvider>
     if (tab === 'prompts') return <PromptsPage />
     if (tab === 'deployment') return setup ? <DeploymentPage setup={setup} form={deploymentForm} /> : <p className="wb-empty">正在读取部署信息…</p>
+    if (tab === 'runtime') return <RuntimeStatus />
     if (tab === 'project') return <ProjectSettingsPage />
     return <div className="wb-diagnostics">
       <div className="wb-settings">
         <section className="wb-card">
-          <h2>运行</h2><div className="sub">当前实例</div>
-          <div className="wb-settingrow"><span>主 Session</span><b>{state?.masterId ?? '未就绪'}</b></div>
-          <div className="wb-settingrow"><span>暂停处理</span><b>{state?.paused ? '是' : '否'}</b></div>
-          <div className="wb-settingrow"><span>执行中</span><b>{state?.load.running ?? 0} / {state?.load.maxWorkers ?? 0}</b></div>
-          <div className="wb-settingrow"><span>排队</span><b>{state?.load.queued ?? 0}</b></div>
-          <div className="wb-settingrow"><span>stateDir</span><b>{setup?.machine?.stateDir ?? '—'}</b></div>
-        </section>
-        <section className="wb-card">
-          <h2>诊断入口</h2><div className="sub">详细 Ticket / Attempt 仍在任务文档里</div>
+          <h2>诊断入口</h2><div className="sub">实时运行状态在「运行」；这里保留审计和详细记录入口</div>
+          <div className="wb-settingrow"><span>运行状态</span><b>设置 → 运行</b></div>
           <div className="wb-settingrow"><span>任务文档</span><b>工作 → 任务 → 执行记录 / 证据 / 时间线</b></div>
           <div className="wb-settingrow"><span>审计</span><b>下方最近 {Math.min(audit.length, 50)} 条</b></div>
           <div className="wb-formactions" style={{ marginTop: 10 }}>
+            <button className="wb-btn wb-btn-outline wb-btn-sm" onClick={() => setTab('runtime')}>打开运行状态</button>
             <button className="wb-btn wb-btn-outline wb-btn-sm" onClick={openMaster}>打开主 Session</button>
           </div>
         </section>
@@ -80,7 +77,7 @@ export function SettingsPanel({ deploymentForm, audit }: { deploymentForm: Deplo
 
   return <div className="wb-settings-page">
     <div className="wb-pagehead">
-      <div><div className="wb-kicker">设置 · 全部项目</div><h1>工作台设置</h1><p>来源、评估、执行、提示词、部署和项目设置都在这里；诊断保留审计和运行状态。</p></div>
+      <div><div className="wb-kicker">设置 · 全部项目</div><h1>工作台设置</h1><p>来源、评估、执行、提示词、部署和项目设置都在这里；「运行」看实时状态，「诊断」保留审计。</p></div>
       <div className="wb-headstat"><b>{state?.load.running ?? 0}</b>执行中</div>
     </div>
     <div className="wb-filterbar"><div className="wb-filters">

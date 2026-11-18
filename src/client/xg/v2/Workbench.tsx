@@ -174,7 +174,9 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   const [toast, setToast] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
   const [openArtifact, setOpenArtifact] = useState<string | null>(null)
+  const [reviewComment, setReviewComment] = useState('')
   const center = useRef<HTMLElement | null>(null)
+  const reviewBox = useRef<HTMLElement | null>(null)
   const triageFor = useRef<string | null>(null)
 
   const projects = data?.projects ?? []
@@ -203,7 +205,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     return () => clearTimeout(timer)
   }, [toast])
 
-  useEffect(() => { setOpenArtifact(null) }, [workSelection?.id])
+  useEffect(() => { setOpenArtifact(null); setReviewComment('') }, [workSelection?.id])
 
   // Open the inbox form once per selected item; later edits must not be overwritten by polling.
   useEffect(() => {
@@ -254,6 +256,11 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
   }
   const retryTask = (task: Task) => action(`retry:${task.id}`,
     () => xgPost('/tasks/:id/retry', undefined, { params: { id: task.id } }), '已重试')
+  const submitReview = (task: Task, decision: '通过' | '退回') => action(`review:${task.id}`, async () => {
+    await xgPost('/tasks/:id/review', { decision, reviewer: '你',
+      ...(reviewComment.trim() ? { comments: reviewComment.trim() } : {}) }, { params: { id: task.id } })
+    setReviewComment('')
+  }, decision === '通过' ? '评审通过，等你验收' : '已退回，Agent 继续处理')
   const confirmMemory = (entry: MemoryEntry) => action(`memory:${entry.id}`,
     () => xgPost('/memory/:id/confirm', { by: '你' }, { params: { id: entry.id } }), '记忆已确认')
   const rejectMemory = (entry: MemoryEntry) => action(`memory:${entry.id}`,
@@ -607,7 +614,8 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
       <Btn variant="ghost" size="sm" onClick={() => askAbout(task.id)}>问 Agent</Btn>
       <Btn variant="ghost" size="sm" onClick={() => cancelTask(task)}>叫停</Btn>
     </>
-    if (task.status === '评审') return <span className="wb-meta"><Dot tone="run" />等待评审结果</span>
+    if (task.status === '评审') return <Btn variant="outline" size="sm"
+      onClick={() => reviewBox.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>提交评审</Btn>
     return null
   }
 
@@ -649,6 +657,15 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
       <div className="wb-metarow"><span>需求 <b>{requirement ? requirement.title : '—'}</b></span>
         <span>类型 <b>{task.type}</b></span><span>优先级 <b>{task.priority}</b></span><span>更新 <b>{timeAgo(task.updatedAt)}</b></span></div>
       <div className="wb-agentline"><Dot tone={taskTone(task.status)} /><div><b>{agentTitle}</b><p>{agentNote}</p></div></div>
+      {task.status === '评审' ? <section className="wb-reviewbox" ref={reviewBox}>
+        <div className="wb-reviewhead"><b>评审结论</b><span>通过后进入待验收；退回后 Agent 继续处理。</span></div>
+        <textarea className="wb-textarea" rows={3} value={reviewComment} placeholder="意见（可选，退回时写清要改什么）"
+          onChange={event => setReviewComment(event.target.value)} />
+        <div className="wb-formactions">
+          <Btn variant="primary" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '通过')}>通过</Btn>
+          <Btn variant="outline" size="sm" busy={busy === `review:${task.id}`} onClick={() => submitReview(task, '退回')}>退回</Btn>
+        </div>
+      </section> : null}
       {fetched?.error ? <p className="wb-error">{fetched.error.message}</p> : null}
       {task.description ? <section className="wb-docsection"><h2>简报</h2><p className="wb-lead">{task.description}</p></section> : null}
       {task.acceptance ? <section className="wb-docsection"><h2>验收标准</h2>

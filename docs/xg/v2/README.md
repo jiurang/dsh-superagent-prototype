@@ -10,6 +10,10 @@
 - **真实动作**：需求确认/拆解/删除、任务派发/重试/取消/验收/删除、收件转需求/忽略/删除、记忆确认/退回、引用检查。
 - **Agent 提案 / diff**：主控通过 `xg.proposal.create` 提交需求拆解提案；今天和需求文档显示 diff，人点「应用」才落库；目标变了会过期。
 - **无用数据出口**：需求、任务、收件都有软删除；需求下还有未取消任务时先提示处理任务。
+- **评审提交**：任务处于「评审中」时，文档内直接填写意见并通过 / 退回；通过后进入待验收，退回后 Agent 继续处理。
+- **运行状态**：设置 → 运行，集中显示执行负载、24 小时消息流转、来源健康、运行问题和默认模型；凭据仍在 DSH 设置 → 模型中配置。
+- **窄屏与设置视觉**：390px 宽度下今天、工作、收件、知识、设置都可读；设置表单统一到 v2 的字号、圆角、按钮和卡片密度。
+- **v2 UI 测试**：覆盖 Today 提案 diff、任务评审提交、任务 / 收件删除和需求删除保护；`test:xg` 共 67 个测试。
 - **设置迁移**：「工作台设置」现在直接包含来源、评估、执行、提示词、部署、项目和诊断；旧版入口、`?legacy=1`、旧 App 和旧面板测试已彻底删除。upstream 同步改为 cherry-pick。
 - **跨面板导航**：今天里的「查看」会打开工作文档；「分诊」会打开收件详情；状态在面板切换间保留。
 - **工作项详情降噪**：标题/状态 sticky；空 section 折叠；证据只显示标题、类型、时间，正文按需展开；Attempt、原始 ID、审计进「诊断」；事件标签人话化。
@@ -19,14 +23,13 @@
 
 剩余问题、优先级和验收标准见 [remaining-issues.md](remaining-issues.md)。最大的三项是：
 
-1. 运行状态页：Source 健康、Trigger、Eval、Execution 没有独立页面，诊断只保留运行状态和审计。
-2. 评审提交、模型凭据、移动端、设置表单视觉和 v2 UI 测试。
+1. 移动端还可以继续做手势、表格横滑等细节，但 390px 基础布局已可用。
 
 ## 结构
 
 - 入口：`src/client/index.tsx` 注册四个主面板和四个 DSH 侧栏条目。
 - UI：`src/client/xg/v2/Workbench.tsx`、`workbench.css`。
-- 设置：`src/client/xg/v2/SettingsPanel.tsx`，复用旧设置表单并加诊断。
+- 设置：`src/client/xg/v2/SettingsPanel.tsx`，复用旧设置表单并加诊断；运行状态在 `src/client/xg/v2/settings/RuntimeStatus.tsx`。
 - 跨面板状态：`src/client/xg/v2/navigation.ts`。
 - Agent：走 DSH 原生会话；面板不再有右侧聊天栏。
 - 数据：`src/xg/api-contract.ts`、`src/xg/http.ts` 的 `GET /workbench`。
