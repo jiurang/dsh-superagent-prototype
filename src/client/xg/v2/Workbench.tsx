@@ -90,6 +90,15 @@ const holderTone = (holder: WorkHolder): string => holder === 'you' ? 'you' : ho
   : holder === 'block' ? 'block' : holder === 'done' ? 'done' : 'idle'
 const holderText = (signal: WorkSignal): string => holderLabel(signal.holder) === signal.next
   ? holderLabel(signal.holder) : `${holderLabel(signal.holder)} · ${signal.next}`
+const readableReport = (text: string): string => text
+  .replace(/\bART_[A-Za-z0-9]+\b/g, '证据')
+  .replace(/\bMEM_[A-Za-z0-9]+\b/g, '记忆草稿')
+  .replace(/\bPROP_[A-Za-z0-9]+\b/g, '提案')
+  .replace(/\bINB_[A-Za-z0-9]+\b/g, '收件')
+  .replace(/\b[A-Z_]+-\d+-A\d+\b/g, '本次尝试')
+  .replace(/（证据(?:、证据)+）/g, '（相关证据）')
+  .replace(/记忆草稿\s*记忆草稿/g, '记忆草稿')
+  .replace(/证据\s*证据/g, '证据')
 const taskSignal = (task: Task): WorkSignal => {
   if (task.status === '就绪') return { holder: 'you', tone: 'you', next: '等你派发', action: 'dispatch' }
   if (task.status === '进行中') return { holder: 'agent', tone: 'agent', next: 'Agent 执行中', action: 'view' }
@@ -851,7 +860,9 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const fetched = detail.id === task.id ? detail : undefined
     const evidence = fetched?.data?.artifacts ?? []
     // Evidence already has its own section; keep the timeline to human milestones.
-    const events = (fetched?.data?.events ?? []).filter(event => event.eventType !== '产物' && event.eventType !== '绑定工单')
+    const events = (fetched?.data?.events ?? [])
+      .filter(event => event.eventType !== '产物' && event.eventType !== '绑定工单')
+      .filter((event, index, all) => index === 0 || event.eventType !== all[index - 1]?.eventType || event.actor !== all[index - 1]?.actor)
     const latestAttempt = fetched?.data?.attempts.slice()
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
     const reportEvent = [...(fetched?.data?.events ?? [])].reverse().find(event => event.eventType === '报告')
@@ -862,7 +873,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
     const hasReport = !!(latestAttempt?.attention || reportSummary || latestAttempt?.lastReportAt)
     const attemptLabel = task.status === '评审' ? '已提交评审' : latestAttempt?.status ?? '—'
     const agentTitle = hasReport ? 'Agent 最近汇报' : 'Agent 状态'
-    const agentNote = latestAttempt?.attention || reportSummary
+    const agentNote = readableReport(latestAttempt?.attention || reportSummary
       || (latestAttempt?.lastReportAt ? `最近汇报 ${timeAgo(latestAttempt.lastReportAt)}`
         : fetched?.data ? task.status === '待验收' ? '交付物和证据已经整理好，等你验收。'
           : task.status === '评审' ? '已提交评审，等待结果。'
@@ -870,7 +881,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           : task.status === '阻塞' ? '停在这里，等你回答。'
           : task.status === '就绪' ? '还没有开始，等你派发。'
           : '任务已经结束。'
-        : '正在读取 Agent 汇报…')
+        : '正在读取 Agent 汇报…'))
     return <div className="wb-doc wb-workdoc">
       <button className="wb-back" onClick={backToList}>← 工作列表</button>
       <div className="wb-doccrumb">任务 <span>/</span> {project ? displayProject(project) : '项目'} <span>/</span> {task.id}</div>
@@ -921,7 +932,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
           </section> : null}
           {fetched?.data?.reviews.length ? <section className="wb-docsection"><h2>评审记录</h2>
             {fetched.data.reviews.map(review => <div className="wb-reviewrecord" key={review.id}>
-              <b>{review.decision === '通过' ? '通过' : '退回'}</b><span>{review.reviewer ?? '评审智能体'} · {timeAgo(review.createdAt)}</span>
+              <b>{review.decision === '通过' ? '通过' : '退回'}</b>{' '}<span>{review.reviewer ?? '评审智能体'} · {timeAgo(review.createdAt)}</span>
               {review.comments ? <p>{review.comments}</p> : null}
             </div>)}
           </section> : null}
@@ -971,7 +982,7 @@ export function Workbench({ view, deploymentForm, onNavigate }: {
             <div className="wb-settingrow"><span>需求</span><b>{requirement ? requirement.title : '—'}</b></div>
             <div className="wb-settingrow"><span>类型</span><b>{task.type}</b></div>
             <div className="wb-settingrow"><span>优先级</span><b>{task.priority}</b></div>
-            <div className="wb-settingrow"><span>尝试</span><b>{latestAttempt?.id ?? task.currentAttemptId ?? '—'}</b></div>
+            <div className="wb-settingrow"><span>尝试</span><b>{fetched?.data?.attempts.length ? `第 ${fetched.data.attempts.length} 次` : '—'}</b></div>
           </section>
           <div className="wb-docfooter">
             <Btn variant="ghost" size="sm" busy={busy === `delete:${task.id}`} onClick={() => removeTask(task)}>删除任务</Btn>
